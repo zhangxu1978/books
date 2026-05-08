@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { parseEditorResponse, saveWorldview, saveStorylines, saveOutline, saveCharacter } = require('../services/novelWorkflowService');
+const { parseEditorResponse, saveWorldview, saveStorylines, saveOutline, savePlot, saveCharacter } = require('../services/novelWorkflowService');
 
 // 解析主编响应
 router.post('/parse', (req, res) => {
@@ -11,6 +11,10 @@ router.post('/parse', (req, res) => {
     }
     
     const parsed = parseEditorResponse(response);
+    console.log('=== /parse returning ===');
+    console.log('plotReady:', parsed.plotReady);
+    console.log('plotInfo:', JSON.stringify(parsed.plotInfo, null, 2));
+    console.log('Full response:', JSON.stringify(parsed, null, 2));
     res.json(parsed);
   } catch (error) {
     console.error('解析主编响应失败:', error);
@@ -76,6 +80,32 @@ router.post('/save-outline', async (req, res) => {
     }
   } catch (error) {
     console.error('保存大纲失败:', error);
+    res.status(500).json({ error: '保存失败' });
+  }
+});
+
+// 保存剧情
+router.post('/save-plot', async (req, res) => {
+  console.log('=== /save-plot endpoint hit ===');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  
+  try {
+    const plotData = req.body;
+    if (!plotData) {
+      console.error('save-plot failed: 缺少剧情数据');
+      return res.status(400).json({ error: '缺少剧情数据' });
+    }
+    
+    const result = await savePlot(plotData);
+    console.log('save-plot result:', result);
+    
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json({ error: result.error });
+    }
+  } catch (error) {
+    console.error('保存剧情失败:', error);
     res.status(500).json({ error: '保存失败' });
   }
 });

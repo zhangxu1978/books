@@ -1,4 +1,4 @@
-const { Worlds, Books, Outlines, Characters } = require('../database/models');
+const { Worlds, Books, Outlines, Characters, Plots } = require('../database/models');
 
 /**
  * 从文本中提取 JSON
@@ -129,10 +129,12 @@ function parseEditorResponse(response) {
     worldInfo: null,
     storylines: null,
     outlineInfo: null,
+    plotInfo: null,
     characterInfo: null,
     ready: false,
     storylinesReady: false,
     outlineReady: false,
+    plotReady: false,
     characterReady: false
   };
 
@@ -150,8 +152,10 @@ function parseEditorResponse(response) {
     if (jsonData.ready === true) {
       result.ready = true;
       if (jsonData.plot && typeof jsonData.plot === 'object') {
-        result.outlineReady = true;
-        result.outlineInfo = jsonData.plot;
+        console.log('=== plot detected ===');
+        console.log('plot data:', JSON.stringify(jsonData.plot, null, 2));
+        result.plotReady = true;
+        result.plotInfo = jsonData.plot;
       } else {
         result.worldInfo = {
           player_name: jsonData.playerName,
@@ -361,6 +365,79 @@ async function saveOutline(outlineData) {
 }
 
 /**
+ * 保存剧情信息
+ */
+async function savePlot(plotData) {
+  console.log('=== savePlot called ===');
+  console.log('plotData received:', JSON.stringify(plotData, null, 2));
+  
+  try {
+    if (!plotData.book_id) {
+      console.error('savePlot failed: 缺少 book_id');
+      return { success: false, error: '缺少 book_id' };
+    }
+
+    const existingPlots = Plots.getByBookId(plotData.book_id);
+    console.log('existingPlots for book_id', plotData.book_id, ':', existingPlots);
+    
+    let plot;
+    
+    // 将 acts、foreshadowing、climax 等复杂数据转为 JSON 存储在 content 字段
+    const content = {
+      structure: plotData.structure,
+      acts: plotData.acts || [],
+      foreshadowing: plotData.foreshadowing || [],
+      climax: plotData.climax || ''
+    };
+    console.log('content to save:', JSON.stringify(content, null, 2));
+
+    if (existingPlots && existingPlots.length > 0) {
+      console.log('Updating existing plot with id:', existingPlots[0].id);
+      plot = Plots.update(existingPlots[0].id, {
+        title: plotData.title || '未命名剧情',
+        content: JSON.stringify(content),
+        target: plotData.target || null,
+        obstacle: plotData.obstacle || null,
+        reward: plotData.reward || null,
+        suspense: plotData.suspense || null,
+        estimated_chapters: plotData.estimatedChapters || 0,
+        start_time: plotData.startTime || null,
+        end_time: plotData.endTime || null,
+        order_num: plotData.order_num || existingPlots.length
+      });
+    } else {
+      console.log('Creating new plot');
+      plot = Plots.create({
+        book_id: plotData.book_id,
+        title: plotData.title || '未命名剧情',
+        content: JSON.stringify(content),
+        target: plotData.target || null,
+        obstacle: plotData.obstacle || null,
+        reward: plotData.reward || null,
+        suspense: plotData.suspense || null,
+        estimated_chapters: plotData.estimatedChapters || 0,
+        start_time: plotData.startTime || null,
+        end_time: plotData.endTime || null,
+        order_num: 0
+      });
+    }
+    
+    console.log('savePlot result:', plot);
+
+    return {
+      success: true,
+      plot: plot
+    };
+  } catch (error) {
+    console.error('保存剧情失败:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * 保存角色信息
  */
 async function saveCharacter(characterData) {
@@ -416,5 +493,6 @@ module.exports = {
   saveWorldview,
   saveStorylines,
   saveOutline,
+  savePlot,
   saveCharacter
 };

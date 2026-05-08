@@ -324,18 +324,34 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   };
 
   const parsePlotResponse = async (responseText) => {
+    console.log('=== parsePlotResponse called ===');
+    console.log('responseText length:', responseText?.length);
+    console.log('responseText preview:', responseText?.substring(0, 300));
+    
     try {
       const response = await axios.post(`${API_BASE}/novel-workflow/parse`, {
         response: responseText
       });
+      console.log('✅ parsePlotResponse success');
+      console.log('response.data:', response.data);
+      console.log('Has ready:', response.data?.ready);
+      console.log('Has plot:', response.data?.plot);
+      console.log('Has character:', response.data?.character);
       return response.data;
     } catch (error) {
-      console.error('Failed to parse response:', error);
-      return { text: responseText, options: [] };
+      console.error('❌ Failed to parse response:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      return { text: responseText, options: [], ready: false };
     }
   };
 
   const sendMessage = async (text = null) => {
+    console.log('🔵 sendMessage called');
+    console.log('text param:', text);
+    console.log('inputText:', inputText);
+    console.log('isLoading:', isLoading);
+    
     let messageText = text || inputText;
     if (typeof messageText === 'object' && messageText !== null) {
       if (messageText instanceof HTMLElement || messageText.nodeType) {
@@ -347,7 +363,12 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       messageText = hasTextProperty ? messageText.text : hasContentProperty ? messageText.content : JSON.stringify(messageText);
     }
     const safeMessageText = String(messageText).trim();
-    if (!safeMessageText || isLoading) return;
+    console.log('safeMessageText:', safeMessageText);
+    
+    if (!safeMessageText || isLoading) {
+      console.log('⚠️ Early return: empty message or isLoading');
+      return;
+    }
     
     let sessionId = currentSession?.id;
     if (!sessionId) {
@@ -447,15 +468,33 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
         setMessages(prev => [...prev, assistantMessage]);
       }
 
+      console.log('✅ Received AI response');
+      console.log('assistantContent length:', assistantContent?.length);
+      console.log('assistantContent preview:', assistantContent?.substring(0, 500));
+      
       const parsedResponse = await parsePlotResponse(assistantContent);
+      
+      console.log('=== Checking parsedResponse ===');
+      console.log('parsedResponse.ready:', parsedResponse.ready);
+      console.log('parsedResponse.plot:', parsedResponse.plot);
+      console.log('parsedResponse.plotInfo:', parsedResponse.plotInfo);
+      console.log('parsedResponse.character:', parsedResponse.character);
+      console.log('parsedResponse.characterInfo:', parsedResponse.characterInfo);
+      console.log('parsedResponse.full:', parsedResponse);
 
       if (parsedResponse.ready) {
-        if (parsedResponse.plot) {
-          await savePlot(parsedResponse.plot);
+        if (parsedResponse.plot || parsedResponse.plotInfo) {
+          console.log('📝 About to save plot');
+          await savePlot(parsedResponse.plot || parsedResponse.plotInfo);
+          console.log('✅ Plot saved successfully');
         }
-        if (parsedResponse.character) {
-          await saveCharacter(parsedResponse.character);
+        if (parsedResponse.character || parsedResponse.characterInfo) {
+          console.log('📝 About to save character');
+          await saveCharacter(parsedResponse.character || parsedResponse.characterInfo);
+          console.log('✅ Character saved successfully');
         }
+      } else {
+        console.log('⚠️ parsedResponse.ready is false, skipping save');
       }
 
       setMessages(prev => {
@@ -500,9 +539,14 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   };
 
   const savePlot = async (plotData) => {
+    console.log('=== savePlot called ===');
+    console.log('plotData:', plotData);
+    console.log('book.id:', book.id);
+    
     try {
       const conflicts = await checkTimeConflict(plotData);
       if (conflicts.length > 0) {
+        console.log('⚠️ Time conflicts detected:', conflicts);
         setTimeConflict({
           message: `检测到时间冲突！以下剧情与当前剧情时间重叠：`,
           conflicts: conflicts
@@ -510,10 +554,18 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
         return;
       }
 
-      await axios.post(`${API_BASE}/plots`, {
+      const content = {
+        structure: plotData.structure,
+        acts: plotData.acts || [],
+        foreshadowing: plotData.foreshadowing || [],
+        climax: plotData.climax || ''
+      };
+      
+      console.log('📤 Sending plot to backend...');
+      console.log('Data to send:', {
         book_id: book.id,
         title: plotData.title || '新剧情',
-        content: JSON.stringify(plotData),
+        content: JSON.stringify(content),
         target: plotData.target || null,
         obstacle: plotData.obstacle || null,
         reward: plotData.reward || null,
@@ -521,12 +573,35 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
         estimated_chapters: plotData.estimatedChapters || 0,
         start_time: plotData.startTime || null,
         end_time: plotData.endTime || null,
-        time_confirmed: !!plotData.startTime,
+        time_confirmed: plotData.startTime ? 1 : 0,
         order_num: plots.length
       });
+      
+      const response = await axios.post(`${API_BASE}/plots`, {
+        book_id: book.id,
+        title: plotData.title || '新剧情',
+        content: JSON.stringify(content),
+        target: plotData.target || null,
+        obstacle: plotData.obstacle || null,
+        reward: plotData.reward || null,
+        suspense: plotData.suspense || null,
+        estimated_chapters: plotData.estimatedChapters || 0,
+        start_time: plotData.startTime || null,
+        end_time: plotData.endTime || null,
+        time_confirmed: plotData.startTime ? 1 : 0,
+        order_num: plots.length
+      });
+      
+      console.log('✅ Plot saved to backend');
+      console.log('Response:', response.data);
+      
       loadPlots();
       if (onDataSaved) onDataSaved();
     } catch (error) {
+      console.error('❌ Failed to save plot:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      console.error('Error stack:', error.stack);
       console.error('Failed to save plot:', error);
     }
   };
