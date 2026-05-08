@@ -184,6 +184,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   const [useStream, setUseStream] = useState(false);
   const [plots, setPlots] = useState([]);
   const [characters, setCharacters] = useState([]);
+  const [worldInfo, setWorldInfo] = useState(null);
   const [activeTab, setActiveTab] = useState('chat');
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -193,12 +194,24 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       loadSessions();
       loadPlots();
       loadCharacters();
+      loadExistingData();
     }
   }, [assistant, book]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const loadExistingData = async () => {
+    try {
+      const worldsRes = await axios.get(`${API_BASE}/worlds/book/${book.id}`);
+      if (worldsRes.data && worldsRes.data.length > 0) {
+        setWorldInfo(worldsRes.data[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load existing data:', error);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -358,7 +371,14 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
 
     const messagesForAI = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
     if (assistantConfig.systemPrompt) {
-      messagesForAI.unshift({ role: 'system', content: assistantConfig.systemPrompt });
+      let systemPrompt = assistantConfig.systemPrompt;
+      
+      if (worldInfo) {
+        const worldContext = `\n\n## 当前书籍世界观信息\n当前正在为书籍「${worldInfo.book_name}」进行剧情策划。\n- 世界名称: ${worldInfo.world_name}\n- 世界类型: ${worldInfo.world_type}\n- 世界描述: ${worldInfo.world_desc}\n- 叙事模式: ${worldInfo.narrative_mode}\n- 氛围: ${worldInfo.atmosphere || '未设置'}\n- 力量体系: ${worldInfo.power_system || '未设置'}\n- 社会结构: ${worldInfo.society_structure || '未设置'}\n- 特殊元素: ${worldInfo.special_element || '未设置'}\n- 主角背景: ${worldInfo.player_background || '未设置'}\n\n请基于以上世界观信息进行剧情策划。`;
+        systemPrompt = assistantConfig.systemPrompt + worldContext;
+      }
+      
+      messagesForAI.unshift({ role: 'system', content: systemPrompt });
     }
 
     try {
@@ -526,25 +546,30 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   };
 
   const renderMessage = (msg, index) => {
+    const displayText = msg.parsed && msg.parsed.narrative ? msg.parsed.narrative : msg.content;
+    
     return (
       <div key={index} className={`message ${msg.role}`}>
         <div className="message-avatar">
           {msg.role === 'user' ? '👤' : '📚'}
         </div>
         <div className="message-content">
-          <div className="message-text">{msg.content}</div>
+          <div className="message-text">{displayText}</div>
           {msg.role === 'assistant' && msg.parsed && msg.parsed.options && msg.parsed.options.length > 0 && (
             <div className="options-container">
-              {msg.parsed.options.map((option, optIndex) => (
-                <button
-                  key={optIndex}
-                  className="option-button"
-                  onClick={() => sendMessage(option.text || option)}
-                  disabled={isLoading}
-                >
-                  {option.text || option}
-                </button>
-              ))}
+              {msg.parsed.options.map((option, optIndex) => {
+                const optionText = typeof option === 'object' && option !== null ? option.text : option;
+                return (
+                  <button
+                    key={optIndex}
+                    className="option-button"
+                    onClick={() => sendMessage(optionText)}
+                    disabled={isLoading}
+                  >
+                    {optionText}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
