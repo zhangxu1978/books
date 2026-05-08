@@ -602,6 +602,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       console.log('✅ Plot saved to backend');
       console.log('Response:', response.data);
       
+      setLastSavedPlotId(response.data.id);
       loadPlots();
       if (onDataSaved) onDataSaved();
     } catch (error) {
@@ -682,8 +683,79 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
   };
 
+  const [extractingCharacters, setExtractingCharacters] = useState(false);
+  const [lastSavedPlotId, setLastSavedPlotId] = useState(null);
+
+  const extractCharacters = async () => {
+    if (!lastSavedPlotId || extractingCharacters) return;
+    
+    setExtractingCharacters(true);
+    
+    try {
+      const response = await axios.get(`${API_BASE}/plots/${lastSavedPlotId}`);
+      const plot = response.data;
+      const plotContent = plot.content ? JSON.parse(plot.content) : {};
+      const plotText = `${plot.title}\n${plot.target || ''}\n${plot.obstacle || ''}\n${plot.reward || ''}\n${plot.suspense || ''}\n${plotContent.structure || ''}\n${JSON.stringify(plotContent.acts || [], null, 2)}`;
+      
+      const extractorAssistants = await axios.get(`${API_BASE}/assistants`);
+      const extractorAssistant = extractorAssistants.data.find(a => 
+        a.type === 'character_extractor' || a.name.includes('角色提取')
+      );
+      
+      if (!extractorAssistant) {
+        alert('未找到角色提取助手');
+        return;
+      }
+      
+      const assistantConfig = JSON.parse(extractorAssistant.config || '{}');
+      const modelId = assistantConfig.model || 'gpt-4';
+      
+      const extractResponse = await axios.post(`${API_BASE}/chat`, {
+        modelId,
+        messages: [
+          { role: 'system', content: assistantConfig.systemPrompt },
+          { role: 'user', content: plotText }
+        ]
+      });
+      
+      const extractedContent = extractResponse.data.choices?.[0]?.message?.content || '';
+      let characters = [];
+      try {
+        characters = JSON.parse(extractedContent);
+      } catch (e) {
+        console.error('Failed to parse extracted characters:', e);
+        alert('提取角色失败，请重试');
+        return;
+      }
+      
+      if (!Array.isArray(characters) || characters.length === 0) {
+        alert('未提取到角色');
+        return;
+      }
+      
+      const saveResponse = await axios.post(`${API_BASE}/characters/batch`, {
+        book_id: book.id,
+        plot_id: lastSavedPlotId,
+        characters: characters
+      });
+      
+      if (saveResponse.data.success) {
+        alert(`成功提取并保存 ${saveResponse.data.data.length} 个角色！`);
+        loadCharacters();
+      } else {
+        alert('保存角色失败');
+      }
+    } catch (error) {
+      console.error('Failed to extract characters:', error);
+      alert('提取角色失败，请重试');
+    } finally {
+      setExtractingCharacters(false);
+    }
+  };
+
   const renderMessage = (msg, index) => {
     const displayText = msg.parsed && msg.parsed.narrative ? msg.parsed.narrative : msg.content;
+    const isPlotReady = msg.parsed && msg.parsed.ready && (msg.parsed.plot || msg.parsed.plotInfo);
     
     return (
       <div key={index} className={`message ${msg.role}`}>
@@ -692,7 +764,21 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
         </div>
         <div className="message-content">
           <div className="message-text">{displayText}</div>
-          {msg.role === 'assistant' && msg.parsed && msg.parsed.options && msg.parsed.options.length > 0 && (
+          
+          {isPlotReady && (
+            <div className="plot-complete-container">
+              <div className="plot-complete-message">✅ 剧情已经生成，可以提取角色了</div>
+              <button 
+                className="extract-characters-button"
+                onClick={extractCharacters}
+                disabled={extractingCharacters}
+              >
+                {extractingCharacters ? '提取中...' : '📤 提取角色'}
+              </button>
+            </div>
+          )}
+          
+          {msg.role === 'assistant' && msg.parsed && msg.parsed.options && msg.parsed.options.length > 0 && !isPlotReady && (
             <div className="options-container">
               {msg.parsed.options.map((option, optIndex) => {
                 const optionText = typeof option === 'object' && option !== null ? option.text : option;
@@ -1128,7 +1214,7 @@ function PlotsManager({ plots, bookId, onSave, onUpdate, onDelete }) {
 
 function CharactersManager({ characters, bookId, onSave, onUpdate, onDelete }) {
   const [editingCharacter, setEditingCharacter] = useState(null);
-  const [newCharacter, setNewCharacter] = useState({ name: '', description: '', image: '', personality: '', background: '', relationships: [] });
+  const [newCharacter, setNewCharacter] = useState({ name: '', description: '', image: '', personality: '', background: '', relationships: [], influence_scope: '本剧情', character_type: '人物' });
   const [showForm, setShowForm] = useState(false);
   const [showRelationships, setShowRelationships] = useState(null);
 
@@ -1239,6 +1325,29 @@ function CharactersManager({ characters, bookId, onSave, onUpdate, onDelete }) {
             value={newCharacter.background}
             onChange={(e) => setNewCharacter({ ...newCharacter, background: e.target.value })}
           />
+          <div className="character-meta">
+            <div className="meta-item">
+              <label>角色类型:</label>
+              <select
+                value={newCharacter.character_type}
+                onChange={(e) => setNewCharacter({ ...newCharacter, character_type: e.target.value })}
+              >
+                <option value="人物">人物</option>
+                <option value="物品">物品</option>
+                <option value="组织">组织</option>
+              </select>
+            </div>
+            <div className="meta-item">
+              <label>影响范围:</label>
+              <select
+                value={newCharacter.influence_scope}
+                onChange={(e) => setNewCharacter({ ...newCharacter, influence_scope: e.target.value })}
+              >
+                <option value="本剧情">本剧情</option>
+                <option value="整个小说">整个小说</option>
+              </select>
+            </div>
+          </div>
           <div className="form-actions">
             <button type="submit" className="save-button">保存</button>
             <button type="button" className="cancel-button" onClick={() => setShowForm(false)}>取消</button>
@@ -1279,6 +1388,30 @@ function CharactersManager({ characters, bookId, onSave, onUpdate, onDelete }) {
                     value={editingCharacter.background || ''}
                     onChange={(e) => setEditingCharacter({ ...editingCharacter, background: e.target.value })}
                   />
+                  
+                  <div className="character-meta">
+                    <div className="meta-item">
+                      <label>角色类型:</label>
+                      <select
+                        value={editingCharacter.character_type || '人物'}
+                        onChange={(e) => setEditingCharacter({ ...editingCharacter, character_type: e.target.value })}
+                      >
+                        <option value="人物">人物</option>
+                        <option value="物品">物品</option>
+                        <option value="组织">组织</option>
+                      </select>
+                    </div>
+                    <div className="meta-item">
+                      <label>影响范围:</label>
+                      <select
+                        value={editingCharacter.influence_scope || '本剧情'}
+                        onChange={(e) => setEditingCharacter({ ...editingCharacter, influence_scope: e.target.value })}
+                      >
+                        <option value="本剧情">本剧情</option>
+                        <option value="整个小说">整个小说</option>
+                      </select>
+                    </div>
+                  </div>
                   
                   <div className="relationships-section">
                     <h5>角色关系</h5>
@@ -1365,6 +1498,10 @@ function CharactersManager({ characters, bookId, onSave, onUpdate, onDelete }) {
               ) : (
                 <>
                   <h4>{character.name}</h4>
+                  <div className="character-tags">
+                    <span className="tag character-type">{character.character_type || '人物'}</span>
+                    <span className="tag influence-scope">{character.influence_scope || '本剧情'}</span>
+                  </div>
                   {character.description && <p className="item-content">{character.description}</p>}
                   {character.personality && (
                     <div className="item-detail">

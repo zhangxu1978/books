@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS chapters (
 CREATE TABLE IF NOT EXISTS characters (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   book_id INTEGER NOT NULL,
+  plot_id INTEGER,
   name TEXT NOT NULL,
   description TEXT,
   image TEXT,
@@ -101,9 +102,12 @@ CREATE TABLE IF NOT EXISTS characters (
   fears TEXT,
   strengths TEXT,
   weaknesses TEXT,
+  influence_scope TEXT DEFAULT '本剧情',
+  character_type TEXT DEFAULT '人物',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+  FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE SET NULL
 );
 
 -- 助手表

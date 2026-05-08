@@ -3,11 +3,12 @@ const db = require('../db');
 const Characters = {
   create: function(data) {
     const stmt = db.prepare(`
-      INSERT INTO characters (book_id, name, description, image, personality, background, motivation, arc, relationships, appearance, goals, fears, strengths, weaknesses)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO characters (book_id, plot_id, name, description, image, personality, background, motivation, arc, relationships, appearance, goals, fears, strengths, weaknesses, influence_scope, character_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       data.book_id,
+      data.plot_id || null,
       data.name,
       data.description || null,
       data.image || null,
@@ -20,7 +21,9 @@ const Characters = {
       data.goals || null,
       data.fears || null,
       data.strengths || null,
-      data.weaknesses || null
+      data.weaknesses || null,
+      data.influence_scope || '本剧情',
+      data.character_type || '人物'
     );
     return this.getById(result.lastInsertRowid);
   },
@@ -56,7 +59,8 @@ const Characters = {
       UPDATE characters
       SET name = ?, description = ?, image = ?, personality = ?, background = ?, 
           motivation = ?, arc = ?, relationships = ?, appearance = ?, goals = ?, 
-          fears = ?, strengths = ?, weaknesses = ?, updated_at = CURRENT_TIMESTAMP
+          fears = ?, strengths = ?, weaknesses = ?, plot_id = ?, influence_scope = ?, 
+          character_type = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     stmt.run(
@@ -73,6 +77,9 @@ const Characters = {
       data.fears || null,
       data.strengths || null,
       data.weaknesses || null,
+      data.plot_id || null,
+      data.influence_scope || '本剧情',
+      data.character_type || '人物',
       id
     );
     return this.getById(id);
