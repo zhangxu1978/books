@@ -18,6 +18,7 @@ const charactersRouter = require('./routes/characters');
 const assistantsRouter = require('./routes/assistants');
 const conversationsRouter = require('./routes/conversations');
 const chapterHistoryRouter = require('./routes/chapterHistory');
+const chapterOutlinesRouter = require('./routes/chapterOutlines');
 const aiRouter = require('./routes/ai');
 const novelWorkflowRouter = require('./routes/novelWorkflow');
 
@@ -30,6 +31,7 @@ app.use('/api/characters', charactersRouter);
 app.use('/api/assistants', assistantsRouter);
 app.use('/api/conversations', conversationsRouter);
 app.use('/api/chapter-history', chapterHistoryRouter);
+app.use('/api/chapter-outlines', chapterOutlinesRouter);
 app.use('/api', aiRouter);
 app.use('/api/novel-workflow', novelWorkflowRouter);
 

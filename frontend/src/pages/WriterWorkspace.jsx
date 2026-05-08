@@ -41,6 +41,13 @@ function WriterWorkspace() {
       icon: '🎭'
     },
     { 
+      title: '章节构建',
+      path: '/chapter-outline',
+      active: false,
+      completed: true,
+      icon: '📝'
+    },
+    { 
       title: '写手创作',
       path: '/writer-workspace',
       active: true,

@@ -138,6 +138,24 @@ CREATE TABLE IF NOT EXISTS conversations (
   FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
 );
 
+-- 章节前置表（章节细纲）
+CREATE TABLE IF NOT EXISTS chapter_outlines (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER NOT NULL,
+  plot_id INTEGER NOT NULL,
+  chapter_title TEXT NOT NULL,
+  chapter_order INTEGER DEFAULT 0,
+  atmosphere TEXT,
+  purpose TEXT,
+  summary TEXT,
+  plot_details TEXT,
+  characters TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+  FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+);
+
 -- 章节历史表
 CREATE TABLE IF NOT EXISTS chapter_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

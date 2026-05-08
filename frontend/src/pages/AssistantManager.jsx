@@ -116,6 +116,7 @@ function AssistantManager() {
       editor_in_chief: '主编',
       writer: '写手',
       character_planner: '角色策划',
+      chapter_planner: '章节构建',
       plot_planner: '剧情策划',
       custom: '自定义'
     }
@@ -156,6 +157,7 @@ function AssistantManager() {
               <option value="editor_in_chief">主编</option>
               <option value="writer">写手</option>
               <option value="character_planner">角色策划</option>
+              <option value="chapter_planner">章节构建</option>
               <option value="plot_planner">剧情策划</option>
               <option value="custom">自定义</option>
             </select>

@@ -36,6 +36,13 @@ function PlotPlanningPage() {
       icon: '🎭'
     },
     { 
+      title: '章节构建',
+      path: '/chapter-outline',
+      active: false,
+      completed: false,
+      icon: '📝'
+    },
+    { 
       title: '写手创作',
       path: '/writer-workspace',
       active: false,
