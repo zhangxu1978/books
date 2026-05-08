@@ -380,14 +380,25 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
                 // 支持两种格式：字符串数组 或 对象数组 {id, text}
                 const optionText = typeof option === 'object' && option !== null ? option.text : option;
                 return (
-                  <button
-                    key={optIndex}
-                    className="option-button"
-                    onClick={() => sendMessage(optionText)}
-                    disabled={isLoading}
-                  >
-                    {optionText}
-                  </button>
+                  <div key={optIndex} className="option-button-wrapper">
+                    <button
+                      className="option-button"
+                      onClick={() => sendMessage(optionText)}
+                      disabled={isLoading}
+                    >
+                      {optionText}
+                    </button>
+                    <button
+                      className="option-edit-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInputText(optionText);
+                      }}
+                      title="编辑选项内容"
+                    >
+                      ✏️
+                    </button>
+                  </div>
                 );
               })}
             </div>

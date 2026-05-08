@@ -290,16 +290,30 @@ function CharacterChatInterface({ assistant, onBack, onCharacterSaved, bookId })
           <div className="message-text">{msg.content}</div>
           {msg.role === 'assistant' && msg.parsed && msg.parsed.options && msg.parsed.options.length > 0 && (
             <div className="options-container">
-              {msg.parsed.options.map((option, optIndex) => (
-                <button
-                  key={optIndex}
-                  className="option-button"
-                  onClick={() => sendMessage(option.text)}
-                  disabled={isLoading}
-                >
-                  {option.text}
-                </button>
-              ))}
+              {msg.parsed.options.map((option, optIndex) => {
+                const optionText = option.text || option;
+                return (
+                  <div key={optIndex} className="option-button-wrapper">
+                    <button
+                      className="option-button"
+                      onClick={() => sendMessage(optionText)}
+                      disabled={isLoading}
+                    >
+                      {optionText}
+                    </button>
+                    <button
+                      className="option-edit-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInputText(optionText);
+                      }}
+                      title="编辑选项内容"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

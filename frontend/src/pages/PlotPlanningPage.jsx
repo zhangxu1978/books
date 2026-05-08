@@ -560,14 +560,25 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
               {msg.parsed.options.map((option, optIndex) => {
                 const optionText = typeof option === 'object' && option !== null ? option.text : option;
                 return (
-                  <button
-                    key={optIndex}
-                    className="option-button"
-                    onClick={() => sendMessage(optionText)}
-                    disabled={isLoading}
-                  >
-                    {optionText}
-                  </button>
+                  <div key={optIndex} className="option-button-wrapper">
+                    <button
+                      className="option-button"
+                      onClick={() => sendMessage(optionText)}
+                      disabled={isLoading}
+                    >
+                      {optionText}
+                    </button>
+                    <button
+                      className="option-edit-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInputText(optionText);
+                      }}
+                      title="编辑选项内容"
+                    >
+                      ✏️
+                    </button>
+                  </div>
                 );
               })}
             </div>
