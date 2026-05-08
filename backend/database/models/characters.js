@@ -4,8 +4,17 @@ const Characters = {
   create: function(data) {
     const stmt = db.prepare(`
       INSERT INTO characters (book_id, plot_id, name, description, image, personality, background, motivation, arc, relationships, appearance, goals, fears, strengths, weaknesses, influence_scope, character_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
+    let relationshipsValue = null;
+    if (data.relationships) {
+      if (typeof data.relationships === 'string') {
+        relationshipsValue = data.relationships;
+      } else {
+        relationshipsValue = JSON.stringify(data.relationships);
+      }
+    }
+    
     const result = stmt.run(
       data.book_id,
       data.plot_id || null,
@@ -16,7 +25,7 @@ const Characters = {
       data.background || null,
       data.motivation || null,
       data.arc || null,
-      Array.isArray(data.relationships) ? JSON.stringify(data.relationships) : (data.relationships || null),
+      relationshipsValue,
       data.appearance || null,
       data.goals || null,
       data.fears || null,
@@ -63,6 +72,15 @@ const Characters = {
           character_type = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
+    let relationshipsValue = null;
+    if (data.relationships) {
+      if (typeof data.relationships === 'string') {
+        relationshipsValue = data.relationships;
+      } else {
+        relationshipsValue = JSON.stringify(data.relationships);
+      }
+    }
+    
     stmt.run(
       data.name,
       data.description || null,
@@ -71,7 +89,7 @@ const Characters = {
       data.background || null,
       data.motivation || null,
       data.arc || null,
-      Array.isArray(data.relationships) ? JSON.stringify(data.relationships) : (data.relationships || null),
+      relationshipsValue,
       data.appearance || null,
       data.goals || null,
       data.fears || null,

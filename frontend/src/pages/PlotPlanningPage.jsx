@@ -743,12 +743,18 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
         ]
       });
       
-      const extractedContent = extractResponse.data.choices?.[0]?.message?.content || '';
+      let extractedContent = extractResponse.data.choices?.[0]?.message?.content || '';
       console.log('Extracted content:', extractedContent);
       
       let characters = [];
       try {
-        characters = JSON.parse(extractedContent);
+        let cleanJson = extractedContent.trim();
+        const codeBlockMatch = cleanJson.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) {
+          cleanJson = codeBlockMatch[1].trim();
+        }
+        
+        characters = JSON.parse(cleanJson);
       } catch (e) {
         console.error('Failed to parse extracted characters:', e);
         console.error('Raw content:', extractedContent);
