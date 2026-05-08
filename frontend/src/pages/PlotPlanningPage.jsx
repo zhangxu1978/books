@@ -338,11 +338,16 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   const sendMessage = async (text = null) => {
     let messageText = text || inputText;
     if (typeof messageText === 'object' && messageText !== null) {
-      messageText = messageText.text || messageText.content || JSON.stringify(messageText);
+      if (messageText instanceof HTMLElement || messageText.nodeType) {
+        console.warn('Attempted to send a DOM element as message');
+        return;
+      }
+      const hasTextProperty = typeof messageText.text === 'string' && messageText.text.trim();
+      const hasContentProperty = typeof messageText.content === 'string' && messageText.content.trim();
+      messageText = hasTextProperty ? messageText.text : hasContentProperty ? messageText.content : JSON.stringify(messageText);
     }
-    if (!messageText || !String(messageText).trim() || isLoading) return;
-    
-    const safeMessageText = String(messageText);
+    const safeMessageText = String(messageText).trim();
+    if (!safeMessageText || isLoading) return;
     
     let sessionId = currentSession?.id;
     if (!sessionId) {

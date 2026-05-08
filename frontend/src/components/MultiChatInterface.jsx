@@ -36,12 +36,8 @@ function MultiChatInterface({ assistants, onBack }) {
 
   const loadSessions = async () => {
     try {
-      if (assistants.length > 0) {
-        const response = await axios.get(`${API_BASE}/conversations/sessions`, {
-          params: { assistant_id: assistants[0].id }
-        });
-        setSessions(response.data);
-      }
+      const response = await axios.get(`${API_BASE}/conversations/sessions`);
+      setSessions(response.data);
     } catch (error) {
       console.error('Failed to load sessions:', error);
     }
@@ -61,22 +57,7 @@ function MultiChatInterface({ assistants, onBack }) {
     await loadSessionMessages(session.id);
   };
 
-  const createNewSession = async () => {
-    try {
-      if (assistants.length > 0) {
-        const response = await axios.post(`${API_BASE}/conversations/sessions`, {
-          title: '新对话（分身模式）',
-          assistant_id: assistants[0].id
-        });
-        const newSession = response.data;
-        setSessions([newSession, ...sessions]);
-        setCurrentSession(newSession);
-        setSharedMessages([]);
-      }
-    } catch (error) {
-      console.error('Failed to create session:', error);
-    }
-  };
+
 
   const addClone = () => {
     const newId = Math.max(...assistantClones.map(c => c.id), 0) + 1;
@@ -94,7 +75,7 @@ function MultiChatInterface({ assistants, onBack }) {
   };
 
   const updateCloneAssistant = (cloneId, assistantId) => {
-    const assistant = assistants.find(a => a.id === assistantId);
+    const assistant = assistants.find(a => a.id === Number(assistantId));
     if (assistant) {
       setAssistantClones(assistantClones.map(c => 
         c.id === cloneId ? { ...c, assistant } : c
@@ -260,9 +241,7 @@ function MultiChatInterface({ assistants, onBack }) {
           <button className="back-button" onClick={onBack}>← 返回</button>
           <h3>分身对话模式</h3>
         </div>
-        <button className="new-chat-button" onClick={createNewSession}>
-          + 新对话
-        </button>
+
         <div className="sessions-list">
           {sessions.map(session => (
             <div

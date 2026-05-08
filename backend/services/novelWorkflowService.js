@@ -4,15 +4,118 @@ const { Worlds, Books, Outlines, Characters } = require('../database/models');
  * 从文本中提取 JSON
  */
 function extractJsonFromText(text) {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
+  if (!text || typeof text !== 'string') return null;
+  
+  text = text.trim();
+  
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch) {
+    text = codeBlockMatch[1];
+  }
+  
+  let start = text.indexOf('{');
+  let end = text.lastIndexOf('}');
+  
+  if (start === -1 || end === -1 || start >= end) {
+    start = text.indexOf('[');
+    end = text.lastIndexOf(']');
+    if (start === -1 || end === -1 || start >= end) return null;
+  }
+  
+  let jsonStr = text.slice(start, end + 1);
+  
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    const repaired = tryRepairJSON(jsonStr);
+    if (repaired) {
+      try {
+        return JSON.parse(repaired);
+      } catch (e2) {}
+    }
+    return null;
+  }
+}
+
+/**
+ * 修复损坏的 JSON 字符串
+ */
+function tryRepairJSON(jsonStr) {
+  jsonStr = jsonStr.replace(/[\u0000-\u001F]+/g, ' ');
+  
+  let fixed = jsonStr;
+  let iterations = 0;
+  const maxIterations = 10;
+  
+  while (iterations < maxIterations) {
+    let before = fixed;
+    
+    fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+    fixed = fixed.replace(/([{[])\s*,/g, '$1');
+    fixed = fixed.replace(/([{,]\s*)"(\w+)":/g, '$1"$2":');
+    
     try {
-      return JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.error('JSON 解析失败:', e);
+      JSON.parse(fixed);
+      return fixed;
+    } catch (e) {}
+    
+    fixed = tryFixUnescapedQuotes(fixed);
+    
+    try {
+      JSON.parse(fixed);
+      return fixed;
+    } catch (e) {}
+    
+    if (before === fixed) break;
+    iterations++;
+  }
+  
+  return null;
+}
+
+/**
+ * 智能修复未转义的引号
+ */
+function tryFixUnescapedQuotes(jsonStr) {
+  let inString = false;
+  let escaped = false;
+  let result = '';
+  
+  for (let i = 0; i < jsonStr.length; i++) {
+    const char = jsonStr[i];
+    
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+    
+    if (char === '\\') {
+      result += char;
+      escaped = true;
+      continue;
+    }
+    
+    if (char === '"') {
+      if (!inString) {
+        inString = true;
+        result += char;
+      } else {
+        const nextNonSpace = jsonStr.slice(i + 1).match(/^\s*(.)/);
+        const nextChar = nextNonSpace ? nextNonSpace[1] : '';
+        if (nextChar === ',' || nextChar === '}' || nextChar === ']' || nextChar === ':') {
+          inString = false;
+          result += char;
+        } else {
+          result += '\\"';
+        }
+      }
+    } else {
+      result += char;
     }
   }
-  return null;
+  
+  return result;
 }
 
 /**
