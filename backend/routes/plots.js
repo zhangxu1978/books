@@ -59,4 +59,14 @@ router.delete('/:id', (req, res) => {
   }
 });
 
+router.post('/check-time-conflict', (req, res) => {
+  try {
+    const { book_id, start_time, end_time, exclude_plot_id } = req.body;
+    const conflicts = Plots.checkTimeConflict(book_id, start_time, end_time, exclude_plot_id);
+    res.json({ conflicts });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

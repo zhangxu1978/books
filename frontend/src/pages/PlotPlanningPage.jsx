@@ -9,9 +9,9 @@ function PlotPlanningPage() {
   const [assistants, setAssistants] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedAssistant, setSelectedAssistant] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [activeTab, setActiveTab] = useState('plots');
+  const [loading, setLoading] = useState(true);
 
   const workflowSteps = [
     { 
@@ -147,6 +147,11 @@ function PlotPlanningPage() {
                 {book.description && (
                   <p className="book-desc">{book.description}</p>
                 )}
+                {(book.estimated_chapters > 0 || book.estimated_words > 0) && (
+                  <div className="book-meta">
+                    <span>预计 {book.estimated_chapters} 章 / {book.estimated_words.toLocaleString()} 字</span>
+                  </div>
+                )}
                 <div className="book-date">
                   更新于: {new Date(book.updated_at).toLocaleDateString('zh-CN')}
                 </div>
@@ -186,6 +191,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   const [characters, setCharacters] = useState([]);
   const [worldInfo, setWorldInfo] = useState(null);
   const [activeTab, setActiveTab] = useState('chat');
+  const [timeConflict, setTimeConflict] = useState(null);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -251,7 +257,6 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       const response = await axios.get(`${API_BASE}/conversations/sessions/${sessionId}/messages`);
       const loadedMessages = response.data;
       
-      // 对每个助手消息进行解析
       const processedMessages = await Promise.all(loadedMessages.map(async (msg) => {
         if (msg.role === 'assistant') {
           try {
@@ -331,16 +336,12 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   };
 
   const sendMessage = async (text = null) => {
-    // 确保 messageText 是字符串
     let messageText = text || inputText;
     if (typeof messageText === 'object' && messageText !== null) {
-      // 如果是对象，尝试提取 text 属性
       messageText = messageText.text || messageText.content || JSON.stringify(messageText);
     }
-    // 确保是字符串后再调用 trim()
     if (!messageText || !String(messageText).trim() || isLoading) return;
     
-    // 确保 messageText 是字符串类型
     const safeMessageText = String(messageText);
     
     let sessionId = currentSession?.id;
@@ -375,7 +376,12 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       
       if (worldInfo) {
         const worldContext = `\n\n## 当前书籍世界观信息\n当前正在为书籍「${worldInfo.book_name}」进行剧情策划。\n- 世界名称: ${worldInfo.world_name}\n- 世界类型: ${worldInfo.world_type}\n- 世界描述: ${worldInfo.world_desc}\n- 叙事模式: ${worldInfo.narrative_mode}\n- 氛围: ${worldInfo.atmosphere || '未设置'}\n- 力量体系: ${worldInfo.power_system || '未设置'}\n- 社会结构: ${worldInfo.society_structure || '未设置'}\n- 特殊元素: ${worldInfo.special_element || '未设置'}\n- 主角背景: ${worldInfo.player_background || '未设置'}\n\n请基于以上世界观信息进行剧情策划。`;
-        systemPrompt = assistantConfig.systemPrompt + worldContext;
+        systemPrompt = systemPrompt + worldContext;
+      }
+
+      if (book) {
+        const bookContext = `\n\n## 当前书籍信息\n- 书籍名称: ${book.title}\n- 预计章节数: ${book.estimated_chapters || '未设置'}\n- 预计总字数: ${book.estimated_words || '未设置'}\n- 每章字数: ${book.words_per_chapter || '未设置'}\n\n请根据书籍篇幅调整剧情节奏：短篇(<5章或<2万字)节奏要快，长篇(>15章或>10万字)可以缓缓进入。`;
+        systemPrompt = systemPrompt + bookContext;
       }
       
       messagesForAI.unshift({ role: 'system', content: systemPrompt });
@@ -472,12 +478,45 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
     setIsLoading(false);
   };
 
+  const checkTimeConflict = async (plotData) => {
+    if (!plotData.startTime && !plotData.endTime) return [];
+    
+    try {
+      const response = await axios.post(`${API_BASE}/plots/check-time-conflict`, {
+        book_id: book.id,
+        start_time: plotData.startTime,
+        end_time: plotData.endTime
+      });
+      return response.data.conflicts || [];
+    } catch (error) {
+      console.error('Failed to check time conflict:', error);
+      return [];
+    }
+  };
+
   const savePlot = async (plotData) => {
     try {
+      const conflicts = await checkTimeConflict(plotData);
+      if (conflicts.length > 0) {
+        setTimeConflict({
+          message: `检测到时间冲突！以下剧情与当前剧情时间重叠：`,
+          conflicts: conflicts
+        });
+        return;
+      }
+
       await axios.post(`${API_BASE}/plots`, {
         book_id: book.id,
         title: plotData.title || '新剧情',
         content: JSON.stringify(plotData),
+        target: plotData.target || null,
+        obstacle: plotData.obstacle || null,
+        reward: plotData.reward || null,
+        suspense: plotData.suspense || null,
+        estimated_chapters: plotData.estimatedChapters || 0,
+        start_time: plotData.startTime || null,
+        end_time: plotData.endTime || null,
+        time_confirmed: !!plotData.startTime,
         order_num: plots.length
       });
       loadPlots();
@@ -489,6 +528,17 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
 
   const updatePlot = async (plotId, data) => {
     try {
+      if (data.start_time || data.end_time) {
+        const conflicts = await checkTimeConflict({ startTime: data.start_time, endTime: data.end_time });
+        if (conflicts.length > 0) {
+          setTimeConflict({
+            message: `检测到时间冲突！以下剧情与当前剧情时间重叠：`,
+            conflicts: conflicts
+          });
+          return;
+        }
+      }
+
       await axios.put(`${API_BASE}/plots/${plotId}`, data);
       loadPlots();
     } catch (error) {
@@ -590,6 +640,23 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
 
   return (
     <div className="chat-interface plot-chat">
+      {timeConflict && (
+        <div className="time-conflict-modal">
+          <div className="modal-content">
+            <h3>⚠️ 时间冲突警告</h3>
+            <p>{timeConflict.message}</p>
+            <ul>
+              {timeConflict.conflicts.map((conflict, index) => (
+                <li key={index}>
+                  <strong>{conflict.title}</strong> (时间: {conflict.start_time} - {conflict.end_time || '未结束'})
+                </li>
+              ))}
+            </ul>
+            <button className="modal-close" onClick={() => setTimeConflict(null)}>确定</button>
+          </div>
+        </div>
+      )}
+      
       <div className="chat-sidebar">
         <div className="sidebar-header">
           <button className="back-button" onClick={onBack}>← 返回</button>
@@ -598,6 +665,11 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
         <div className="book-info">
           <h4>{book.title}</h4>
           <p className="book-author">作者: {book.author}</p>
+          {(book.estimated_chapters > 0 || book.estimated_words > 0) && (
+            <p className="book-stats-info">
+              预计: {book.estimated_chapters} 章 / {book.estimated_words.toLocaleString()} 字
+            </p>
+          )}
         </div>
         <button className="new-chat-button" onClick={createNewSession}>
           + 新对话
@@ -663,6 +735,12 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
                 <div className="welcome-message">
                   <h3>开始与剧情策划助手对话</h3>
                   <p>剧情策划助手将引导您设计精彩的故事情节和人物角色</p>
+                  <div className="book-reference">
+                    <strong>参考书籍信息:</strong>
+                    <p>书名: {book.title}</p>
+                    <p>预计章节: {book.estimated_chapters || '未设置'} 章</p>
+                    <p>预计字数: {book.estimated_words.toLocaleString() || '未设置'} 字</p>
+                  </div>
                 </div>
               ) : (
                 messages.map((msg, index) => renderMessage(msg, index))
@@ -719,7 +797,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
 
 function PlotsManager({ plots, bookId, onSave, onUpdate, onDelete }) {
   const [editingPlot, setEditingPlot] = useState(null);
-  const [newPlot, setNewPlot] = useState({ title: '', content: '' });
+  const [newPlot, setNewPlot] = useState({ title: '', content: '', target: '', obstacle: '', reward: '', suspense: '', estimated_chapters: 0, start_time: '', end_time: '' });
   const [showForm, setShowForm] = useState(false);
 
   const handleSaveNewPlot = async (e) => {
@@ -727,9 +805,16 @@ function PlotsManager({ plots, bookId, onSave, onUpdate, onDelete }) {
     if (!newPlot.title.trim()) return;
     await onSave({
       title: newPlot.title,
-      content: newPlot.content
+      content: newPlot.content,
+      target: newPlot.target,
+      obstacle: newPlot.obstacle,
+      reward: newPlot.reward,
+      suspense: newPlot.suspense,
+      estimatedChapters: parseInt(newPlot.estimated_chapters) || 0,
+      startTime: newPlot.start_time,
+      endTime: newPlot.end_time
     });
-    setNewPlot({ title: '', content: '' });
+    setNewPlot({ title: '', content: '', target: '', obstacle: '', reward: '', suspense: '', estimated_chapters: 0, start_time: '', end_time: '' });
     setShowForm(false);
   };
 
@@ -762,6 +847,68 @@ function PlotsManager({ plots, bookId, onSave, onUpdate, onDelete }) {
             value={newPlot.content}
             onChange={(e) => setNewPlot({ ...newPlot, content: e.target.value })}
           />
+          <div className="plot-factors">
+            <div className="factor-item">
+              <label>🎯 目标</label>
+              <textarea
+                placeholder="主角在这段剧情中想要达成什么"
+                value={newPlot.target}
+                onChange={(e) => setNewPlot({ ...newPlot, target: e.target.value })}
+              />
+            </div>
+            <div className="factor-item">
+              <label>🚧 阻碍</label>
+              <textarea
+                placeholder="阻止主角达成目标的障碍和冲突"
+                value={newPlot.obstacle}
+                onChange={(e) => setNewPlot({ ...newPlot, obstacle: e.target.value })}
+              />
+            </div>
+            <div className="factor-item">
+              <label>🎁 奖励</label>
+              <textarea
+                placeholder="达成目标后获得的回报"
+                value={newPlot.reward}
+                onChange={(e) => setNewPlot({ ...newPlot, reward: e.target.value })}
+              />
+            </div>
+            <div className="factor-item">
+              <label>❓ 悬念</label>
+              <textarea
+                placeholder="留下的未解之谜"
+                value={newPlot.suspense}
+                onChange={(e) => setNewPlot({ ...newPlot, suspense: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="plot-meta">
+            <div className="meta-item">
+              <label>预估章节数:</label>
+              <input
+                type="number"
+                value={newPlot.estimated_chapters}
+                onChange={(e) => setNewPlot({ ...newPlot, estimated_chapters: e.target.value })}
+              />
+            </div>
+            <div className="meta-item">
+              <label>开始时间:</label>
+              <input
+                type="text"
+                placeholder="主角年龄或世界时间"
+                value={newPlot.start_time}
+                onChange={(e) => setNewPlot({ ...newPlot, start_time: e.target.value })}
+              />
+            </div>
+            <div className="meta-item">
+              <label>结束时间:</label>
+              <input
+                type="text"
+                placeholder="主角年龄或世界时间"
+                value={newPlot.end_time}
+                onChange={(e) => setNewPlot({ ...newPlot, end_time: e.target.value })}
+              />
+            </div>
+          </div>
           <div className="form-actions">
             <button type="submit" className="save-button">保存</button>
             <button type="button" className="cancel-button" onClick={() => setShowForm(false)}>取消</button>
@@ -786,6 +933,62 @@ function PlotsManager({ plots, bookId, onSave, onUpdate, onDelete }) {
                     value={editingPlot.content || ''}
                     onChange={(e) => setEditingPlot({ ...editingPlot, content: e.target.value })}
                   />
+                  <div className="plot-factors">
+                    <div className="factor-item">
+                      <label>🎯 目标</label>
+                      <textarea
+                        value={editingPlot.target || ''}
+                        onChange={(e) => setEditingPlot({ ...editingPlot, target: e.target.value })}
+                      />
+                    </div>
+                    <div className="factor-item">
+                      <label>🚧 阻碍</label>
+                      <textarea
+                        value={editingPlot.obstacle || ''}
+                        onChange={(e) => setEditingPlot({ ...editingPlot, obstacle: e.target.value })}
+                      />
+                    </div>
+                    <div className="factor-item">
+                      <label>🎁 奖励</label>
+                      <textarea
+                        value={editingPlot.reward || ''}
+                        onChange={(e) => setEditingPlot({ ...editingPlot, reward: e.target.value })}
+                      />
+                    </div>
+                    <div className="factor-item">
+                      <label>❓ 悬念</label>
+                      <textarea
+                        value={editingPlot.suspense || ''}
+                        onChange={(e) => setEditingPlot({ ...editingPlot, suspense: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="plot-meta">
+                    <div className="meta-item">
+                      <label>预估章节数:</label>
+                      <input
+                        type="number"
+                        value={editingPlot.estimated_chapters || 0}
+                        onChange={(e) => setEditingPlot({ ...editingPlot, estimated_chapters: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="meta-item">
+                      <label>开始时间:</label>
+                      <input
+                        type="text"
+                        value={editingPlot.start_time || ''}
+                        onChange={(e) => setEditingPlot({ ...editingPlot, start_time: e.target.value })}
+                      />
+                    </div>
+                    <div className="meta-item">
+                      <label>结束时间:</label>
+                      <input
+                        type="text"
+                        value={editingPlot.end_time || ''}
+                        onChange={(e) => setEditingPlot({ ...editingPlot, end_time: e.target.value })}
+                      />
+                    </div>
+                  </div>
                   <div className="form-actions">
                     <button type="submit" className="save-button">保存</button>
                     <button type="button" className="cancel-button" onClick={() => setEditingPlot(null)}>取消</button>
@@ -795,6 +998,30 @@ function PlotsManager({ plots, bookId, onSave, onUpdate, onDelete }) {
                 <>
                   <h4>{plot.title}</h4>
                   {plot.content && <p className="item-content">{plot.content}</p>}
+                  
+                  {(plot.target || plot.obstacle || plot.reward || plot.suspense) && (
+                    <div className="plot-factors-display">
+                      {plot.target && <div className="factor-display"><span className="factor-icon">🎯</span><span className="factor-label">目标:</span><span>{plot.target}</span></div>}
+                      {plot.obstacle && <div className="factor-display"><span className="factor-icon">🚧</span><span className="factor-label">阻碍:</span><span>{plot.obstacle}</span></div>}
+                      {plot.reward && <div className="factor-display"><span className="factor-icon">🎁</span><span className="factor-label">奖励:</span><span>{plot.reward}</span></div>}
+                      {plot.suspense && <div className="factor-display"><span className="factor-icon">❓</span><span className="factor-label">悬念:</span><span>{plot.suspense}</span></div>}
+                    </div>
+                  )}
+                  
+                  {(plot.estimated_chapters > 0 || plot.start_time) && (
+                    <div className="plot-meta-display">
+                      {plot.estimated_chapters > 0 && (
+                        <span className="meta-item">📑 预估 {plot.estimated_chapters} 章</span>
+                      )}
+                      {plot.start_time && (
+                        <span className="meta-item">⏰ {plot.start_time} - {plot.end_time || '未结束'}</span>
+                      )}
+                      {plot.time_confirmed && (
+                        <span className="meta-item confirmed">✓ 时间已确认</span>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="item-actions">
                     <button className="edit-button" onClick={() => setEditingPlot(plot)}>编辑</button>
                     <button className="delete-button" onClick={() => onDelete(plot.id)}>删除</button>

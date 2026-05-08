@@ -7,6 +7,8 @@ const API_BASE = 'http://localhost:3001/api';
 function Dashboard() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingBook, setEditingBook] = useState(null);
+  const [editForm, setEditForm] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,6 +24,33 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditClick = (book) => {
+    setEditingBook(book);
+    setEditForm({
+      title: book.title,
+      author: book.author,
+      description: book.description || '',
+      estimated_chapters: book.estimated_chapters || '',
+      estimated_words: book.estimated_words || '',
+      words_per_chapter: book.words_per_chapter || ''
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await axios.put(`${API_BASE}/books/${editingBook.id}`, editForm);
+      fetchBooks();
+      setEditingBook(null);
+    } catch (error) {
+      console.error('Error updating book:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingBook(null);
+    setEditForm({});
   };
 
   const getBookStats = (book) => {
@@ -152,33 +181,112 @@ function Dashboard() {
                   const stats = getBookStats(book);
                   return (
                     <div key={book.id} className="book-card">
-                      <div className="book-header">
-                        <h4>{book.title}</h4>
-                        <p className="book-author">{book.author}</p>
-                      </div>
-                      {book.description && (
-                        <p className="book-desc">{book.description}</p>
+                      {editingBook?.id === book.id ? (
+                        <div className="book-edit-form">
+                          <input
+                            type="text"
+                            value={editForm.title}
+                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                            className="edit-input"
+                          />
+                          <input
+                            type="text"
+                            value={editForm.author}
+                            onChange={(e) => setEditForm({ ...editForm, author: e.target.value })}
+                            className="edit-input"
+                            placeholder="作者"
+                          />
+                          <textarea
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                            className="edit-textarea"
+                            placeholder="简介"
+                          />
+                          <div className="edit-fields">
+                            <div className="edit-field">
+                              <label>预计章节数:</label>
+                              <input
+                                type="number"
+                                value={editForm.estimated_chapters}
+                                onChange={(e) => setEditForm({ ...editForm, estimated_chapters: parseInt(e.target.value) || 0 })}
+                                className="edit-input small"
+                              />
+                            </div>
+                            <div className="edit-field">
+                              <label>预计总字数:</label>
+                              <input
+                                type="number"
+                                value={editForm.estimated_words}
+                                onChange={(e) => setEditForm({ ...editForm, estimated_words: parseInt(e.target.value) || 0 })}
+                                className="edit-input small"
+                              />
+                            </div>
+                            <div className="edit-field">
+                              <label>每章字数:</label>
+                              <input
+                                type="number"
+                                value={editForm.words_per_chapter}
+                                onChange={(e) => setEditForm({ ...editForm, words_per_chapter: parseInt(e.target.value) || 0 })}
+                                className="edit-input small"
+                              />
+                            </div>
+                          </div>
+                          <div className="edit-actions">
+                            <button className="save-btn" onClick={handleSaveEdit}>保存</button>
+                            <button className="cancel-btn" onClick={handleCancelEdit}>取消</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="book-header">
+                            <h4>{book.title}</h4>
+                            <p className="book-author">{book.author}</p>
+                          </div>
+                          {book.description && (
+                            <p className="book-desc">{book.description}</p>
+                          )}
+                          {(book.estimated_chapters > 0 || book.estimated_words > 0) && (
+                            <div className="book-estimates">
+                              <div className="estimate-item">
+                                <span>📑 预计 {book.estimated_chapters} 章</span>
+                              </div>
+                              <div className="estimate-item">
+                                <span>📝 预计 {book.estimated_words.toLocaleString()} 字</span>
+                              </div>
+                              {book.words_per_chapter > 0 && (
+                                <div className="estimate-item">
+                                  <span>📄 每章 {book.words_per_chapter.toLocaleString()} 字</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="book-stats">
+                            <div className="stat-item">
+                              <span className="stat-icon">📄</span>
+                              <span>{stats.chapters} 章</span>
+                            </div>
+                            <div className="stat-item">
+                              <span className="stat-icon">🎭</span>
+                              <span>{stats.characters} 人</span>
+                            </div>
+                            <div className="stat-item">
+                              <span className="stat-icon">📖</span>
+                              <span>{stats.plots} 剧情</span>
+                            </div>
+                          </div>
+                          <div className="book-footer">
+                            <span className="book-date">更新: {stats.lastUpdated}</span>
+                            <div className="book-actions">
+                              <button className="edit-button" onClick={() => handleEditClick(book)}>
+                                ✏️ 编辑
+                              </button>
+                              <Link to="/editor-workflow" className="continue-btn">
+                                继续 →
+                              </Link>
+                            </div>
+                          </div>
+                        </>
                       )}
-                      <div className="book-stats">
-                        <div className="stat-item">
-                          <span className="stat-icon">📄</span>
-                          <span>{stats.chapters} 章</span>
-                        </div>
-                        <div className="stat-item">
-                          <span className="stat-icon">🎭</span>
-                          <span>{stats.characters} 人</span>
-                        </div>
-                        <div className="stat-item">
-                          <span className="stat-icon">📖</span>
-                          <span>{stats.plots} 剧情</span>
-                        </div>
-                      </div>
-                      <div className="book-footer">
-                        <span className="book-date">更新: {stats.lastUpdated}</span>
-                        <Link to="/editor-workflow" className="continue-btn">
-                          继续 →
-                        </Link>
-                      </div>
                     </div>
                   );
                 })}
