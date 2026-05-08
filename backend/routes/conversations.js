@@ -60,6 +60,19 @@ router.delete('/sessions/:id', (req, res) => {
   }
 });
 
+router.put('/sessions/:id/plot', (req, res) => {
+  try {
+    const { plot_id } = req.body;
+    const session = ChatSessions.updatePlotId(req.params.id, plot_id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    res.json(session);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 消息相关接口
 
 router.get('/sessions/:sessionId/messages', (req, res) => {

@@ -286,6 +286,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
 
   const selectSession = async (session) => {
     setCurrentSession(session);
+    setLastSavedPlotId(session.plot_id || null);
     await loadSessionMessages(session.id);
   };
 
@@ -602,7 +603,20 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       console.log('✅ Plot saved to backend');
       console.log('Response:', response.data);
       
-      setLastSavedPlotId(response.data.id);
+      const plotId = response.data.id;
+      setLastSavedPlotId(plotId);
+      
+      if (currentSession) {
+        await axios.put(`${API_BASE}/conversations/sessions/${currentSession.id}/plot`, {
+          plot_id: plotId
+        });
+        console.log('✅ Session plot_id updated');
+        
+        setSessions(prev => prev.map(s => 
+          s.id === currentSession.id ? { ...s, plot_id: plotId } : s
+        ));
+      }
+      
       loadPlots();
       if (onDataSaved) onDataSaved();
     } catch (error) {
@@ -687,23 +701,34 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   const [lastSavedPlotId, setLastSavedPlotId] = useState(null);
 
   const extractCharacters = async () => {
-    if (!lastSavedPlotId || extractingCharacters) return;
+    console.log('extractCharacters called', { lastSavedPlotId, extractingCharacters });
+    
+    if (!lastSavedPlotId) {
+      alert('请先生成并保存剧情');
+      return;
+    }
+    
+    if (extractingCharacters) return;
     
     setExtractingCharacters(true);
     
     try {
       const response = await axios.get(`${API_BASE}/plots/${lastSavedPlotId}`);
       const plot = response.data;
+      console.log('Plot loaded:', plot);
+      
       const plotContent = plot.content ? JSON.parse(plot.content) : {};
       const plotText = `${plot.title}\n${plot.target || ''}\n${plot.obstacle || ''}\n${plot.reward || ''}\n${plot.suspense || ''}\n${plotContent.structure || ''}\n${JSON.stringify(plotContent.acts || [], null, 2)}`;
       
-      const extractorAssistants = await axios.get(`${API_BASE}/assistants`);
-      const extractorAssistant = extractorAssistants.data.find(a => 
+      const extractorAssistantsRes = await axios.get(`${API_BASE}/assistants`);
+      const extractorAssistant = extractorAssistantsRes.data.find(a => 
         a.type === 'character_extractor' || a.name.includes('角色提取')
       );
       
+      console.log('Found extractor assistant:', extractorAssistant);
+      
       if (!extractorAssistant) {
-        alert('未找到角色提取助手');
+        alert('未找到角色提取助手，请先在助手管理中创建角色提取助手');
         return;
       }
       
@@ -719,12 +744,15 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       });
       
       const extractedContent = extractResponse.data.choices?.[0]?.message?.content || '';
+      console.log('Extracted content:', extractedContent);
+      
       let characters = [];
       try {
         characters = JSON.parse(extractedContent);
       } catch (e) {
         console.error('Failed to parse extracted characters:', e);
-        alert('提取角色失败，请重试');
+        console.error('Raw content:', extractedContent);
+        alert('提取角色失败，请重试。原始内容：' + extractedContent.substring(0, 200));
         return;
       }
       
@@ -739,6 +767,8 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
         characters: characters
       });
       
+      console.log('Save response:', saveResponse.data);
+      
       if (saveResponse.data.success) {
         alert(`成功提取并保存 ${saveResponse.data.data.length} 个角色！`);
         loadCharacters();
@@ -747,7 +777,8 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       }
     } catch (error) {
       console.error('Failed to extract characters:', error);
-      alert('提取角色失败，请重试');
+      console.error('Error details:', error.response?.data);
+      alert('提取角色失败：' + (error.response?.data?.error || error.message));
     } finally {
       setExtractingCharacters(false);
     }
@@ -763,14 +794,14 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
           {msg.role === 'user' ? '👤' : '📚'}
         </div>
         <div className="message-content">
-          <div className="message-text">{displayText}</div>
+          {!isPlotReady && <div className="message-text">{displayText}</div>}
           
           {isPlotReady && (
             <div className="plot-complete-container">
               <div className="plot-complete-message">✅ 剧情已经生成，可以提取角色了</div>
               <button 
                 className="extract-characters-button"
-                onClick={extractCharacters}
+                onClick={() => extractCharacters()}
                 disabled={extractingCharacters}
               >
                 {extractingCharacters ? '提取中...' : '📤 提取角色'}

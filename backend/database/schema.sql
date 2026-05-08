@@ -126,10 +126,12 @@ CREATE TABLE IF NOT EXISTS chat_sessions (
   title TEXT NOT NULL,
   assistant_id INTEGER,
   book_id INTEGER,
+  plot_id INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (assistant_id) REFERENCES assistants(id) ON DELETE SET NULL,
-  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+  FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE SET NULL
 );
 
 -- 对话历史表

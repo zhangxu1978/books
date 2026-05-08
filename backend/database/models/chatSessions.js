@@ -3,10 +3,10 @@ const db = require('../db');
 const ChatSessions = {
   create: function(data) {
     const stmt = db.prepare(`
-      INSERT INTO chat_sessions (title, assistant_id, book_id)
-      VALUES (?, ?, ?)
+      INSERT INTO chat_sessions (title, assistant_id, book_id, plot_id)
+      VALUES (?, ?, ?, ?)
     `);
-    const result = stmt.run(data.title, data.assistant_id || null, data.book_id || null);
+    const result = stmt.run(data.title, data.assistant_id || null, data.book_id || null, data.plot_id || null);
     return this.getById(result.lastInsertRowid);
   },
 
@@ -36,15 +36,26 @@ const ChatSessions = {
     
     const stmt = db.prepare(`
       UPDATE chat_sessions
-      SET title = ?, assistant_id = ?, book_id = ?, updated_at = CURRENT_TIMESTAMP
+      SET title = ?, assistant_id = ?, book_id = ?, plot_id = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     stmt.run(
       data.title || session.title,
       data.assistant_id !== undefined ? data.assistant_id : session.assistant_id,
       data.book_id !== undefined ? data.book_id : session.book_id,
+      data.plot_id !== undefined ? data.plot_id : session.plot_id,
       id
     );
+    return this.getById(id);
+  },
+
+  updatePlotId: function(id, plotId) {
+    const stmt = db.prepare(`
+      UPDATE chat_sessions
+      SET plot_id = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(plotId || null, id);
     return this.getById(id);
   },
 

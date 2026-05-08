@@ -1967,6 +1967,92 @@ body {
   gap: 1rem;
 }
 
+.plot-complete-container {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.plot-complete-message {
+  color: white;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.extract-characters-button {
+  background: white;
+  color: #667eea;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.extract-characters-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.extract-characters-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.character-meta {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.character-meta .meta-item {
+  flex: 1;
+}
+
+.character-meta label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.character-meta select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.character-tags {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.character-tags .tag {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #e9ecef;
+  color: #495057;
+}
+
+.character-tags .character-type {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.character-tags .influence-scope {
+  background: #d4edda;
+  color: #155724;
+}
+
 /* 选项按钮容器和编辑按钮样式 */
 .options-container {
   display: flex;
