@@ -149,21 +149,26 @@ function parseEditorResponse(response) {
     // 支持用户提到的格式：ready, playerName, bookName, etc.
     if (jsonData.ready === true) {
       result.ready = true;
-      result.worldInfo = {
-        player_name: jsonData.playerName,
-        book_name: jsonData.bookName,
-        narrative_mode: jsonData.narrativeMode,
-        world_name: jsonData.worldName,
-        world_type: jsonData.worldType,
-        world_desc: jsonData.worldDesc,
-        world_tags: jsonData.worldTags,
-        atmosphere: jsonData.atmosphere,
-        power_system: jsonData.powerSystem,
-        society_structure: jsonData.societyStructure,
-        special_element: jsonData.specialElement,
-        player_background: jsonData.playerBackground,
-        storylines: jsonData.storylines
-      };
+      if (jsonData.plot && typeof jsonData.plot === 'object') {
+        result.outlineReady = true;
+        result.outlineInfo = jsonData.plot;
+      } else {
+        result.worldInfo = {
+          player_name: jsonData.playerName,
+          book_name: jsonData.bookName,
+          narrative_mode: jsonData.narrativeMode,
+          world_name: jsonData.worldName,
+          world_type: jsonData.worldType,
+          world_desc: jsonData.worldDesc,
+          world_tags: jsonData.worldTags,
+          atmosphere: jsonData.atmosphere,
+          power_system: jsonData.powerSystem,
+          society_structure: jsonData.societyStructure,
+          special_element: jsonData.specialElement,
+          player_background: jsonData.playerBackground,
+          storylines: jsonData.storylines
+        };
+      }
       console.log('Built worldInfo:', result.worldInfo);
     }
     if (jsonData.worldInfo) {
@@ -320,6 +325,7 @@ async function saveStorylines(storylinesData) {
  * 保存大纲信息
  */
 async function saveOutline(outlineData) {
+  console.log('Saving outline:', outlineData);
   try {
     if (!outlineData.book_id) {
       return { success: false, error: '缺少 book_id' };
@@ -330,13 +336,13 @@ async function saveOutline(outlineData) {
     
     if (existingOutlines && existingOutlines.length > 0) {
       outline = Outlines.update(existingOutlines[0].id, {
-        title: outlineData.title || '小说大纲',
+        title: outlineData.title || '剧情大纲',
         content: JSON.stringify(outlineData)
       });
     } else {
       outline = Outlines.create({
         book_id: outlineData.book_id,
-        title: outlineData.title || '小说大纲',
+        title: outlineData.title || '剧情大纲',
         content: JSON.stringify(outlineData)
       });
     }

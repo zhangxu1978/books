@@ -768,7 +768,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
               />
               <button
                 className="send-button"
-                onClick={isLoading ? stopGeneration : sendMessage}
+                onClick={isLoading ? stopGeneration : () => sendMessage()}
               >
                 {isLoading ? '停止' : '发送'}
               </button>
