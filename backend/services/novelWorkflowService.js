@@ -34,6 +34,8 @@ function parseEditorResponse(response) {
   };
 
   const jsonData = extractJsonFromText(response);
+  console.log('Extracted JSON data:', jsonData);
+  
   if (jsonData) {
     if (jsonData.narrative) {
       result.narrative = jsonData.narrative;
@@ -59,6 +61,7 @@ function parseEditorResponse(response) {
         player_background: jsonData.playerBackground,
         storylines: jsonData.storylines
       };
+      console.log('Built worldInfo:', result.worldInfo);
     }
     if (jsonData.worldInfo) {
       result.worldInfo = jsonData.worldInfo;
@@ -83,27 +86,45 @@ function parseEditorResponse(response) {
     }
   }
 
+  console.log('Final parse result:', result);
   return result;
 }
 
 /**
  * 保存世界观信息
  */
-async function saveWorldview(worldData) {
+async function saveWorldview(worldData, sessionId = null) {
   try {
+    console.log('saveWorldview called with:', { worldData, sessionId });
+    
     let book;
     if (worldData.book_id) {
+      console.log('Updating existing book with id:', worldData.book_id);
       book = Books.update(worldData.book_id, {
         title: worldData.book_name,
         author: worldData.player_name || '匿名作者',
         description: worldData.world_desc
       });
     } else {
+      console.log('Creating new book');
       book = Books.create({
         title: worldData.book_name || '未命名小说',
         author: worldData.player_name || '匿名作者',
         description: worldData.world_desc
       });
+    }
+    
+    console.log('Book after create/update:', book);
+    
+    if (!book || !book.id) {
+      throw new Error('Failed to create or update book');
+    }
+    
+    // 如果提供了 session_id，更新会话的 book_id
+    if (sessionId) {
+      console.log('Updating session:', sessionId, 'with book_id:', book.id);
+      const ChatSessions = require('../database/models/chatSessions');
+      ChatSessions.update(sessionId, { book_id: book.id });
     }
 
     const existingWorlds = Worlds.getByBookId(book.id);
@@ -127,7 +148,7 @@ async function saveWorldview(worldData) {
         storylines: Array.isArray(worldData.storylines) ? JSON.stringify(worldData.storylines) : worldData.storylines
       });
     } else {
-      world = Worlds.create({
+      const worldCreateData = {
         book_id: book.id,
         player_name: worldData.player_name,
         book_name: worldData.book_name,
@@ -142,7 +163,9 @@ async function saveWorldview(worldData) {
         special_element: worldData.special_element,
         player_background: worldData.player_background,
         storylines: Array.isArray(worldData.storylines) ? JSON.stringify(worldData.storylines) : worldData.storylines
-      });
+      };
+      console.log('Creating world with data:', worldCreateData);
+      world = Worlds.create(worldCreateData);
     }
 
     return {

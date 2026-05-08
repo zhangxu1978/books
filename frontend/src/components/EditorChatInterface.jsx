@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:3001/api';
 
@@ -15,6 +16,7 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
   const [outlineInfo, setOutlineInfo] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewMode, setPreviewMode] = useState('world');
+  const [successTip, setSuccessTip] = useState('');  // 用于显示成功提示
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -158,7 +160,7 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
 
   const saveWorldview = async (worldData) => {
     try {
-      const data = { ...worldData };
+      const data = { ...worldData, session_id: currentSession?.id };
       if (bookId) data.book_id = bookId;
       const response = await axios.post(`${API_BASE}/novel-workflow/save-worldview`, data);
       if (response.data.success) {
@@ -166,7 +168,7 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
         if (onWorldviewSaved) {
           onWorldviewSaved(response.data);
         }
-        return true;
+        return response.data;
       }
     } catch (error) {
       console.error('Failed to save worldview:', error);
@@ -303,15 +305,22 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
       }
 
       const parsedResponse = await parseEditorResponse(assistantContent);
+      console.log('Parsed response:', parsedResponse);
       
       let currentBookId = bookId;
       
       if (parsedResponse.ready && parsedResponse.worldInfo) {
+        console.log('Saving worldview with data:', parsedResponse.worldInfo);
         const saveResult = await saveWorldview(parsedResponse.worldInfo);
+        console.log('Save result:', saveResult);
         if (saveResult && saveResult.book) {
           currentBookId = saveResult.book.id;
         }
         setShowPreview(true);
+        setSuccessTip('🎉 世界观构建完成！');
+        setTimeout(() => {
+          setSuccessTip('📚 请进入「剧情策划」继续完善故事线...');
+        }, 2000);
       }
 
       if (parsedResponse.storylinesReady && parsedResponse.storylines) {
@@ -616,6 +625,13 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
         </div>
 
         {showPreview && (worldInfo || storylines || outlineInfo) && renderPreview()}
+
+        {successTip && (
+          <div className="success-tip-container">
+            <div className="success-tip">{successTip}</div>
+            <Link to="/plot-planning" className="next-step-link">进入剧情策划 →</Link>
+          </div>
+        )}
 
         <div className="messages-container">
           {messages.length === 0 ? (

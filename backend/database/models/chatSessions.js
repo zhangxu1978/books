@@ -31,12 +31,20 @@ const ChatSessions = {
   },
 
   update: function(id, data) {
+    const session = this.getById(id);
+    if (!session) return null;
+    
     const stmt = db.prepare(`
       UPDATE chat_sessions
       SET title = ?, assistant_id = ?, book_id = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
-    stmt.run(data.title, data.assistant_id || null, data.book_id || null, id);
+    stmt.run(
+      data.title || session.title,
+      data.assistant_id !== undefined ? data.assistant_id : session.assistant_id,
+      data.book_id !== undefined ? data.book_id : session.book_id,
+      id
+    );
     return this.getById(id);
   },
 

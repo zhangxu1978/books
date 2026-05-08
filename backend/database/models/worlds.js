@@ -7,20 +7,20 @@ const Worlds = {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
-      data.book_id,
-      data.player_name || null,
-      data.book_name || null,
-      data.narrative_mode || null,
-      data.world_name || null,
-      data.world_type || null,
-      data.world_desc || null,
-      data.world_tags || null,
-      data.atmosphere || null,
-      data.power_system || null,
-      data.society_structure || null,
-      data.special_element || null,
-      data.player_background || null,
-      data.storylines || null
+      data.book_id != null ? data.book_id : null,
+      data.player_name != null ? data.player_name : null,
+      data.book_name != null ? data.book_name : null,
+      data.narrative_mode != null ? data.narrative_mode : null,
+      data.world_name != null ? data.world_name : null,
+      data.world_type != null ? data.world_type : null,
+      data.world_desc != null ? data.world_desc : null,
+      data.world_tags != null ? data.world_tags : null,
+      data.atmosphere != null ? data.atmosphere : null,
+      data.power_system != null ? data.power_system : null,
+      data.society_structure != null ? data.society_structure : null,
+      data.special_element != null ? data.special_element : null,
+      data.player_background != null ? data.player_background : null,
+      data.storylines != null ? (typeof data.storylines === 'object' ? JSON.stringify(data.storylines) : data.storylines) : null
     );
     return this.getById(result.lastInsertRowid);
   },

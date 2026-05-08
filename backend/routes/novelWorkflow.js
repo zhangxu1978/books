@@ -22,11 +22,13 @@ router.post('/parse', (req, res) => {
 router.post('/save-worldview', async (req, res) => {
   try {
     const worldData = req.body;
+    const { session_id } = req.body;
+    
     if (!worldData) {
       return res.status(400).json({ error: '缺少世界观数据' });
     }
     
-    const result = await saveWorldview(worldData);
+    const result = await saveWorldview(worldData, session_id);
     if (result.success) {
       res.json(result);
     } else {
