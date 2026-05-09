@@ -132,7 +132,7 @@ function ChapterEditor({ value, onChange }) {
 
   const callAI = async (prompt) => {
     try {
-      const response = await axios.post('http://localhost:3001/api/ai/chat', {
+      const response = await axios.post('http://localhost:3022/api/ai/chat', {
         modelId: 'moda-deepseek-flash',
         messages: [
           {

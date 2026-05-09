@@ -3,7 +3,7 @@ import axios from 'axios';
 import ChatInterface from '../components/ChatInterface';
 import MultiChatInterface from '../components/MultiChatInterface';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3022/api';
 
 function ChatPage() {
   const [assistants, setAssistants] = useState([]);

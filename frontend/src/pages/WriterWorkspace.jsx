@@ -3,7 +3,7 @@ import axios from 'axios';
 import ChapterEditor from '../components/ChapterEditor';
 import { Link } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3022/api';
 
 function WriterWorkspace() {
   const [books, setBooks] = useState([]);

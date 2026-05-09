@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import CharacterChatInterface from '../components/CharacterChatInterface';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3022/api';
 
 function CharacterPlanningPage() {
   const [books, setBooks] = useState([]);

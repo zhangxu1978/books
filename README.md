@@ -19,10 +19,10 @@ npm run dev
 ### 手动启动
 
 ```bash
-# 启动后端 (端口 3001)
+# 启动后端 (端口 3022)
 npm run dev:backend
 
-# 启动前端 (端口 5173)
+# 启动前端 (端口 3023)
 npm run dev:frontend
 ```
 
