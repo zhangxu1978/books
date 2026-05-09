@@ -293,25 +293,6 @@ function WriterWorkspace() {
 
   return (
     <div className="writer-workspace">
-      {/* Workflow Navigation */}
-      <div className="workflow-nav-container">
-        <div className="workflow-nav">
-          {workflowSteps.map((step, index) => (
-            <Link 
-              key={step.path} 
-              to={step.path}
-              className={`workflow-nav-item ${step.active ? 'active' : ''} ${step.completed ? 'completed' : ''}`}
-            >
-              <div className="workflow-nav-icon">{step.icon}</div>
-              <div className="workflow-nav-content">
-                <div className="workflow-nav-title">{step.title}</div>
-              </div>
-              {index < workflowSteps.length - 1 && <div className="workflow-nav-arrow">→</div>}
-            </Link>
-          ))}
-        </div>
-      </div>
-
       <div className="page-header">
         <h1>✍️ 写手多版本创作</h1>
         <Link to="/" className="back-link">← 返回首页</Link>

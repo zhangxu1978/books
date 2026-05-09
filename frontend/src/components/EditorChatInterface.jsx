@@ -18,6 +18,7 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
   const [previewMode, setPreviewMode] = useState('world');
   const [successTip, setSuccessTip] = useState('');  // 用于显示成功提示
   const [currentAssistant, setCurrentAssistant] = useState(assistant);
+  const [planningCompleted, setPlanningCompleted] = useState(false);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -94,13 +95,14 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
       
       // 对每个助手消息进行解析
       const processedMessages = await Promise.all(loadedMessages.map(async (msg) => {
-        if (msg.role === 'assistant') {
+        if (msg.role === 'assistant' && msg.content && String(msg.content).trim()) {
           try {
             const parseResponse = await axios.post(`${API_BASE}/novel-workflow/parse`, {
               response: msg.content
             });
             return { ...msg, parsed: parseResponse.data };
           } catch (e) {
+            console.warn('Failed to parse message:', e);
             return msg;
           }
         }
@@ -108,6 +110,11 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
       }));
       
       setMessages(processedMessages);
+      
+      const hasCompletedPlanning = processedMessages.some(msg => 
+        msg.parsed && msg.parsed.ready && (msg.parsed.worldInfo || msg.parsed.storylines || msg.parsed.outlineInfo)
+      );
+      setPlanningCompleted(hasCompletedPlanning);
     } catch (error) {
       console.error('Failed to load messages:', error);
     }
@@ -331,6 +338,7 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
           currentBookId = saveResult.book.id;
         }
         setShowPreview(true);
+        setPlanningCompleted(true);
         setSuccessTip('🎉 世界观构建完成！');
         setTimeout(() => {
           setSuccessTip('📚 请进入「剧情策划」继续完善故事线...');
@@ -380,6 +388,7 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
   const renderMessage = (msg, index) => {
     // 如果有解析的JSON，使用narrative作为显示文本
     const displayText = msg.parsed && msg.parsed.narrative ? msg.parsed.narrative : msg.content;
+    const isPlanningReady = msg.parsed && msg.parsed.ready && (msg.parsed.worldInfo || msg.parsed.storylines || msg.parsed.outlineInfo);
     
     return (
       <div key={index} className={`message ${msg.role}`}>
@@ -387,8 +396,15 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
           {msg.role === 'user' ? '👤' : '🤖'}
         </div>
         <div className="message-content">
-          <div className="message-text">{displayText}</div>
-          {msg.role === 'assistant' && msg.parsed && msg.parsed.options && msg.parsed.options.length > 0 && (
+          {!isPlanningReady && <div className="message-text">{displayText}</div>}
+          
+          {isPlanningReady && (
+            <div className="plot-complete-container">
+              <div className="plot-complete-message">✅ 规划完成</div>
+            </div>
+          )}
+          
+          {msg.role === 'assistant' && msg.parsed && msg.parsed.options && msg.parsed.options.length > 0 && !isPlanningReady && (
             <div className="options-container">
               {msg.parsed.options.map((option, optIndex) => {
                 // 支持两种格式：字符串数组 或 对象数组 {id, text}
@@ -687,20 +703,21 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
             className="chat-input"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="输入消息..."
+            placeholder={planningCompleted ? '规划已完成' : '输入消息...'}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
               }
             }}
-            disabled={isLoading}
+            disabled={isLoading || planningCompleted}
           />
           <button
             className="send-button"
             onClick={isLoading ? stopGeneration : sendMessage}
+            disabled={planningCompleted}
           >
-            {isLoading ? '停止' : '发送'}
+            {isLoading ? '停止' : planningCompleted ? '规划完成' : '发送'}
           </button>
         </div>
       </div>

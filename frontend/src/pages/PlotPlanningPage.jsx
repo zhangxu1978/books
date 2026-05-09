@@ -158,6 +158,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved, allAssistants
   const [activeTab, setActiveTab] = useState('chat');
   const [timeConflict, setTimeConflict] = useState(null);
   const [currentAssistant, setCurrentAssistant] = useState(assistant);
+  const [plotCompleted, setPlotCompleted] = useState(false);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -237,13 +238,14 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved, allAssistants
       const loadedMessages = response.data;
       
       const processedMessages = await Promise.all(loadedMessages.map(async (msg) => {
-        if (msg.role === 'assistant') {
+        if (msg.role === 'assistant' && msg.content && String(msg.content).trim()) {
           try {
             const parseResponse = await axios.post(`${API_BASE}/novel-workflow/parse`, {
               response: msg.content
             });
             return { ...msg, parsed: parseResponse.data };
           } catch (e) {
+            console.warn('Failed to parse message:', e);
             return msg;
           }
         }
@@ -251,6 +253,11 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved, allAssistants
       }));
       
       setMessages(processedMessages);
+      
+      const hasCompletedPlot = processedMessages.some(msg => 
+        msg.parsed && msg.parsed.ready && (msg.parsed.plot || msg.parsed.plotInfo)
+      );
+      setPlotCompleted(hasCompletedPlot);
     } catch (error) {
       console.error('Failed to load messages:', error);
     }
@@ -463,6 +470,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved, allAssistants
       console.log('parsedResponse.full:', parsedResponse);
 
       if (parsedResponse.ready) {
+        setPlotCompleted(true);
         if (parsedResponse.plot || parsedResponse.plotInfo) {
           console.log('📝 About to save plot');
           await savePlot(parsedResponse.plot || parsedResponse.plotInfo);
@@ -776,7 +784,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved, allAssistants
           
           {isPlotReady && (
             <div className="plot-complete-container">
-              <div className="plot-complete-message">✅ 剧情已经生成，可以提取角色了</div>
+              <div className="plot-complete-message">✅ 规划完成</div>
               <button 
                 className="extract-characters-button"
                 onClick={() => extractCharacters()}
@@ -946,20 +954,21 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved, allAssistants
                 className="chat-input"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="输入消息..."
+                placeholder={plotCompleted ? '剧情规划已完成' : '输入消息...'}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                   }
                 }}
-                disabled={isLoading}
+                disabled={isLoading || plotCompleted}
               />
               <button
                 className="send-button"
                 onClick={isLoading ? stopGeneration : () => sendMessage()}
+                disabled={plotCompleted}
               >
-                {isLoading ? '停止' : '发送'}
+                {isLoading ? '停止' : plotCompleted ? '规划完成' : '发送'}
               </button>
             </div>
           </>
