@@ -14,37 +14,6 @@ function EditorWorkflow() {
   const [loading, setLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
 
-  const workflowSteps = [
-    { 
-      title: '主编规划',
-      path: '/editor-workflow',
-      active: true,
-      completed: true,
-      icon: '📖'
-    },
-    { 
-      title: '剧情策划',
-      path: '/plot-planning',
-      active: false,
-      completed: false,
-      icon: '📚'
-    },
-    { 
-      title: '角色策划',
-      path: '/character-planning',
-      active: false,
-      completed: false,
-      icon: '🎭'
-    },
-    { 
-      title: '写手创作',
-      path: '/writer-workspace',
-      active: false,
-      completed: false,
-      icon: '✍️'
-    }
-  ];
-
   useEffect(() => {
     loadData();
   }, []);
@@ -133,25 +102,6 @@ function EditorWorkflow() {
 
   return (
     <div className="editor-workflow">
-      {/* Workflow Navigation */}
-      <div className="workflow-nav-container">
-        <div className="workflow-nav">
-          {workflowSteps.map((step, index) => (
-            <Link 
-              key={step.path} 
-              to={step.path}
-              className={`workflow-nav-item ${step.active ? 'active' : ''} ${step.completed ? 'completed' : ''}`}
-            >
-              <div className="workflow-nav-icon">{step.icon}</div>
-              <div className="workflow-nav-content">
-                <div className="workflow-nav-title">{step.title}</div>
-              </div>
-              {index < workflowSteps.length - 1 && <div className="workflow-nav-arrow">→</div>}
-            </Link>
-          ))}
-        </div>
-      </div>
-
       <div className="page-header">
         <h1>📖 主编工作流</h1>
         <Link to="/" className="back-link">← 返回首页</Link>
