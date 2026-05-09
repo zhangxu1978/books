@@ -68,10 +68,21 @@ function CharacterPlanningPage() {
       ]);
       setBooks(booksRes.data);
       
+      // 只显示角色策划和自定义助手
       const charAssistants = assistantsRes.data.filter(a => 
-        a.type === 'character_planner' || a.name.includes('角色')
+        a.type === 'character_planner' || a.name.includes('角色') || a.type === 'custom'
       );
-      setAssistants(charAssistants.length > 0 ? charAssistants : assistantsRes.data);
+      
+      // 排序：自定义助手排在下面
+      const sortedAssistants = [...(charAssistants.length > 0 ? charAssistants : [])].sort((a, b) => {
+        const aIsCustom = a.type === 'custom' || a.name.includes('自定义');
+        const bIsCustom = b.type === 'custom' || b.name.includes('自定义');
+        if (aIsCustom && !bIsCustom) return 1;
+        if (!aIsCustom && bIsCustom) return -1;
+        return 0;
+      });
+      
+      setAssistants(sortedAssistants.length > 0 ? sortedAssistants : assistantsRes.data);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -167,9 +178,13 @@ function CharacterPlanningPage() {
     return (
       <CharacterChatInterface
         assistant={selectedAssistant}
+        allAssistants={assistants}
         bookId={selectedBook?.id}
         onBack={handleBack}
         onCharacterSaved={handleCharacterSaved}
+        onAssistantChange={(newAssistant) => {
+          setSelectedAssistant(newAssistant);
+        }}
       />
     );
   }

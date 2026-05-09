@@ -33,10 +33,21 @@ function ChapterOutlinePage() {
       ]);
       setBooks(booksRes.data);
       
+      // 只显示章节构建和自定义助手
       const chapterAssistants = assistantsRes.data.filter(a => 
-        a.type === 'chapter_planner' || a.name.includes('章节')
+        a.type === 'chapter_planner' || a.name.includes('章节') || a.type === 'custom'
       );
-      setAssistants(chapterAssistants.length > 0 ? chapterAssistants : assistantsRes.data);
+      
+      // 排序：自定义助手排在下面
+      const sortedAssistants = [...(chapterAssistants.length > 0 ? chapterAssistants : [])].sort((a, b) => {
+        const aIsCustom = a.type === 'custom' || a.name.includes('自定义');
+        const bIsCustom = b.type === 'custom' || b.name.includes('自定义');
+        if (aIsCustom && !bIsCustom) return 1;
+        if (!aIsCustom && bIsCustom) return -1;
+        return 0;
+      });
+      
+      setAssistants(sortedAssistants.length > 0 ? sortedAssistants : assistantsRes.data);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -70,9 +81,13 @@ function ChapterOutlinePage() {
     return (
       <ChapterOutlineChatInterface
         assistant={selectedAssistant}
+        allAssistants={assistants}
         book={selectedBook}
         onBack={handleBack}
         onDataSaved={loadData}
+        onAssistantChange={(newAssistant) => {
+          setSelectedAssistant(newAssistant);
+        }}
       />
     );
   }
@@ -139,7 +154,7 @@ function ChapterOutlinePage() {
   );
 }
 
-function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved }) {
+function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, allAssistants, onAssistantChange }) {
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -154,17 +169,31 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved }) {
   const [expandedActIds, setExpandedActIds] = useState(new Set());
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [selectedPlot, setSelectedPlot] = useState(null);
+  const [currentAssistant, setCurrentAssistant] = useState(assistant);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
   useEffect(() => {
-    if (assistant && book) {
+    if (currentAssistant && book) {
       loadSessions();
       loadPlots();
       loadChapterOutlines();
       loadWorldview();
     }
-  }, [assistant, book]);
+  }, [currentAssistant, book]);
+
+  const handleAssistantChange = (assistantId) => {
+    // 处理类型不匹配的问题（字符串 vs 数字）
+    const newAssistant = allAssistants.find(a => String(a.id) === String(assistantId));
+    if (newAssistant) {
+      setCurrentAssistant(newAssistant);
+      setCurrentSession(null);
+      setMessages([]);
+      if (onAssistantChange) {
+        onAssistantChange(newAssistant);
+      }
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -177,7 +206,7 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved }) {
   const loadSessions = async () => {
     try {
       const response = await axios.get(`${API_BASE}/conversations/sessions`, {
-        params: { assistant_id: assistant.id, book_id: book.id }
+        params: { assistant_id: currentAssistant.id, book_id: book.id }
       });
       setSessions(response.data);
     } catch (error) {
@@ -258,7 +287,7 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved }) {
     try {
       const response = await axios.post(`${API_BASE}/conversations/sessions`, {
         title: '章节构建新对话',
-        assistant_id: assistant.id,
+        assistant_id: currentAssistant.id,
         book_id: book.id
       });
       const newSession = response.data;
@@ -398,7 +427,7 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved }) {
     setInputText('');
     setIsLoading(true);
 
-    const assistantConfig = JSON.parse(assistant.config || '{}');
+    const assistantConfig = JSON.parse(currentAssistant.config || '{}');
     const modelId = assistantConfig.model || assistantConfig.modelId || 'gpt-4';
 
     const messagesForAI = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
@@ -568,10 +597,22 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved }) {
 
   return (
     <div className="chat-interface chapter-outline-chat">
-      <div className="chat-sidebar plots-sidebar">
+      <div className="combined-sidebar">
         <div className="sidebar-header">
           <button className="back-button" onClick={onBack}>← 返回</button>
-          <h3>📝 {assistant?.name || '章节构建师'}</h3>
+          {allAssistants && allAssistants.length > 0 ? (
+            <select 
+              value={currentAssistant?.id} 
+              onChange={(e) => handleAssistantChange(e.target.value)}
+              className="assistant-selector"
+            >
+              {allAssistants.map(a => (
+                <option key={a.id} value={a.id}>📝 {a.name}</option>
+              ))}
+            </select>
+          ) : (
+            <h3>📝 {currentAssistant?.name || '章节构建师'}</h3>
+          )}
         </div>
         
         <div className="book-info">
@@ -582,68 +623,74 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved }) {
           )}
         </div>
 
-        <button className="new-chat-button" onClick={createNewSession}>+ 新对话</button>
-
-        <div className="sessions-list">
-          {sessions.map(session => (
-            <div key={session.id} className={`session-item ${currentSession?.id === session.id ? 'active' : ''}`} onClick={() => selectSession(session)}>
-              <span className="session-title">{session.title}</span>
-              <button className="delete-session-button" onClick={(e) => deleteSession(session.id, e)}>×</button>
-              <span className="session-date">{formatDate(session.updated_at)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="plots-tree-sidebar">
-        <div className="tree-header">
-          <h3>📚 剧情结构</h3>
-        </div>
-        <div className="plots-tree">
-          {plots.length === 0 ? (
-            <div className="empty-tree">暂无剧情</div>
-          ) : (
-            plots.map((plot) => (
-              <div key={plot.id} className="plot-item">
-                <div className="plot-header" onClick={() => togglePlotExpand(plot.id)}>
-                  <span className="expand-icon">{expandedPlotIds.has(plot.id) ? '▼' : '▶'}</span>
-                  <span className="plot-title">{plot.title}</span>
-                  {selectedPlot?.id === plot.id && <span className="selected-indicator">●</span>}
-                </div>
-                
-                {expandedPlotIds.has(plot.id) && plot.content?.acts && plot.content.acts.length > 0 && (
-                  <div className="acts-list">
-                    {plot.content.acts.map((act, actIndex) => {
-                      const actKey = `${plot.id}-${actIndex}`;
-                      return (
-                        <div key={actKey} className="act-item">
-                          <div className="act-header" onClick={() => toggleActExpand(actKey)}>
-                            <span className="expand-icon">{expandedActIds.has(actKey) ? '▼' : '▶'}</span>
-                            <span className="act-title">第{act.act || actIndex + 1}幕</span>
-                          </div>
-                          
-                          {expandedActIds.has(actKey) && act.chapters && act.chapters.length > 0 && (
-                            <div className="chapters-list">
-                              {act.chapters.map((chapter, chapterIndex) => (
-                                <div 
-                                  key={`${actKey}-${chapterIndex}`}
-                                  className={`chapter-item ${selectedChapter?.chapter_index === chapterIndex && selectedChapter?.plot_id === plot.id ? 'selected' : ''}`}
-                                  onClick={() => handleSelectChapter(chapter, plot.id, actIndex, chapterIndex)}
-                                >
-                                  <span className="chapter-number">第{chapterIndex + 1}章</span>
-                                  <span className="chapter-title">{chapter.title || '未命名章节'}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+        {/* 剧情结构部分 */}
+        <div className="plots-tree-section">
+          <div className="section-header">
+            <h3>📚 剧情结构</h3>
+          </div>
+          <div className="plots-tree">
+            {plots.length === 0 ? (
+              <div className="empty-tree">暂无剧情</div>
+            ) : (
+              plots.map((plot) => (
+                <div key={plot.id} className="plot-item">
+                  <div className="plot-header" onClick={() => togglePlotExpand(plot.id)}>
+                    <span className="expand-icon">{expandedPlotIds.has(plot.id) ? '▼' : '▶'}</span>
+                    <span className="plot-title">{plot.title}</span>
+                    {selectedPlot?.id === plot.id && <span className="selected-indicator">●</span>}
                   </div>
-                )}
+                  
+                  {expandedPlotIds.has(plot.id) && plot.content?.acts && plot.content.acts.length > 0 && (
+                    <div className="acts-list">
+                      {plot.content.acts.map((act, actIndex) => {
+                        const actKey = `${plot.id}-${actIndex}`;
+                        return (
+                          <div key={actKey} className="act-item">
+                            <div className="act-header" onClick={() => toggleActExpand(actKey)}>
+                              <span className="expand-icon">{expandedActIds.has(actKey) ? '▼' : '▶'}</span>
+                              <span className="act-title">第{act.act || actIndex + 1}幕</span>
+                            </div>
+                            
+                            {expandedActIds.has(actKey) && act.chapters && act.chapters.length > 0 && (
+                              <div className="chapters-list">
+                                {act.chapters.map((chapter, chapterIndex) => (
+                                  <div 
+                                    key={`${actKey}-${chapterIndex}`}
+                                    className={`chapter-item ${selectedChapter?.chapter_index === chapterIndex && selectedChapter?.plot_id === plot.id ? 'selected' : ''}`}
+                                    onClick={() => handleSelectChapter(chapter, plot.id, actIndex, chapterIndex)}
+                                  >
+                                    <span className="chapter-number">第{chapterIndex + 1}章</span>
+                                    <span className="chapter-title">{chapter.title || '未命名章节'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* 会话列表部分 */}
+        <div className="sessions-section">
+          <div className="section-header">
+            <h3>💬 对话历史</h3>
+            <button className="new-chat-button" onClick={createNewSession}>+ 新对话</button>
+          </div>
+          <div className="sessions-list">
+            {sessions.map(session => (
+              <div key={session.id} className={`session-item ${currentSession?.id === session.id ? 'active' : ''}`} onClick={() => selectSession(session)}>
+                <span className="session-title">{session.title}</span>
+                <button className="delete-session-button" onClick={(e) => deleteSession(session.id, e)}>×</button>
+                <span className="session-date">{formatDate(session.updated_at)}</span>
               </div>
-            ))
-          )}
+            ))}
+          </div>
         </div>
       </div>
 

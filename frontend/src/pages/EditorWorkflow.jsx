@@ -58,10 +58,21 @@ function EditorWorkflow() {
       ]);
       setBooks(booksRes.data);
       
+      // 只显示主编和自定义助手
       const editorAssistants = assistantsRes.data.filter(a => 
-        a.type === 'editor' || a.name.includes('主编')
+        a.type === 'editor_in_chief' || a.name.includes('主编') || a.type === 'custom'
       );
-      setAssistants(editorAssistants.length > 0 ? editorAssistants : assistantsRes.data);
+      
+      // 排序：自定义助手排在下面
+      const sortedAssistants = [...(editorAssistants.length > 0 ? editorAssistants : [])].sort((a, b) => {
+        const aIsCustom = a.type === 'custom' || a.name.includes('自定义');
+        const bIsCustom = b.type === 'custom' || b.name.includes('自定义');
+        if (aIsCustom && !bIsCustom) return 1;
+        if (!aIsCustom && bIsCustom) return -1;
+        return 0;
+      });
+      
+      setAssistants(sortedAssistants.length > 0 ? sortedAssistants : assistantsRes.data);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -109,9 +120,13 @@ function EditorWorkflow() {
     return (
       <EditorChatInterface
         assistant={selectedAssistant}
+        allAssistants={assistants}
         bookId={selectedBook?.id}
         onBack={handleBack}
         onWorldviewSaved={handleWorldviewSaved}
+        onAssistantChange={(newAssistant) => {
+          setSelectedAssistant(newAssistant);
+        }}
       />
     );
   }

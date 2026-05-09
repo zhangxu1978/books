@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:3001/api';
 
-function CharacterChatInterface({ assistant, onBack, onCharacterSaved, bookId }) {
+function CharacterChatInterface({ assistant, allAssistants, onBack, onCharacterSaved, bookId, onAssistantChange }) {
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -12,14 +12,28 @@ function CharacterChatInterface({ assistant, onBack, onCharacterSaved, bookId })
   const [useStream, setUseStream] = useState(false);
   const [characterInfo, setCharacterInfo] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [currentAssistant, setCurrentAssistant] = useState(assistant);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
   useEffect(() => {
-    if (assistant) {
+    if (currentAssistant) {
       loadSessions();
     }
-  }, [assistant]);
+  }, [currentAssistant]);
+
+  const handleAssistantChange = (assistantId) => {
+    // 处理类型不匹配的问题（字符串 vs 数字）
+    const newAssistant = allAssistants.find(a => String(a.id) === String(assistantId));
+    if (newAssistant) {
+      setCurrentAssistant(newAssistant);
+      setCurrentSession(null);
+      setMessages([]);
+      if (onAssistantChange) {
+        onAssistantChange(newAssistant);
+      }
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -31,7 +45,7 @@ function CharacterChatInterface({ assistant, onBack, onCharacterSaved, bookId })
 
   const loadSessions = async () => {
     try {
-      const params = { assistant_id: assistant.id };
+      const params = { assistant_id: currentAssistant.id };
       if (bookId) params.book_id = bookId;
       const response = await axios.get(`${API_BASE}/conversations/sessions`, { params });
       setSessions(response.data);
@@ -75,7 +89,7 @@ function CharacterChatInterface({ assistant, onBack, onCharacterSaved, bookId })
     try {
       const data = {
         title: '角色策划新对话',
-        assistant_id: assistant.id
+        assistant_id: currentAssistant.id
       };
       if (bookId) data.book_id = bookId;
       const response = await axios.post(`${API_BASE}/conversations/sessions`, data);
@@ -180,7 +194,7 @@ function CharacterChatInterface({ assistant, onBack, onCharacterSaved, bookId })
     setInputText('');
     setIsLoading(true);
 
-    const assistantConfig = JSON.parse(assistant.config || '{}');
+    const assistantConfig = JSON.parse(currentAssistant.config || '{}');
     const modelId = assistantConfig.model || assistantConfig.modelId || 'gpt-4';
 
     const messagesForAI = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
@@ -405,7 +419,19 @@ function CharacterChatInterface({ assistant, onBack, onCharacterSaved, bookId })
       <div className="chat-sidebar">
         <div className="sidebar-header">
           <button className="back-button" onClick={onBack}>← 返回</button>
-          <h3>🎭 {assistant?.name || '角色策划'}</h3>
+          {allAssistants && allAssistants.length > 0 ? (
+            <select 
+              value={currentAssistant?.id} 
+              onChange={(e) => handleAssistantChange(e.target.value)}
+              className="assistant-selector"
+            >
+              {allAssistants.map(a => (
+                <option key={a.id} value={a.id}>🎭 {a.name}</option>
+              ))}
+            </select>
+          ) : (
+            <h3>🎭 {currentAssistant?.name || '角色策划'}</h3>
+          )}
         </div>
         <button className="new-chat-button" onClick={createNewSession}>
           + 新对话

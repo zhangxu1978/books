@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:3001/api';
 
-function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
+function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSaved, bookId, onAssistantChange }) {
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -17,14 +17,28 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewMode, setPreviewMode] = useState('world');
   const [successTip, setSuccessTip] = useState('');  // 用于显示成功提示
+  const [currentAssistant, setCurrentAssistant] = useState(assistant);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
   useEffect(() => {
-    if (assistant) {
+    if (currentAssistant) {
       loadSessions();
     }
-  }, [assistant]);
+  }, [currentAssistant]);
+
+  const handleAssistantChange = (assistantId) => {
+    // 处理类型不匹配的问题（字符串 vs 数字）
+    const newAssistant = allAssistants.find(a => String(a.id) === String(assistantId));
+    if (newAssistant) {
+      setCurrentAssistant(newAssistant);
+      setCurrentSession(null);
+      setMessages([]);
+      if (onAssistantChange) {
+        onAssistantChange(newAssistant);
+      }
+    }
+  };
 
   useEffect(() => {
     if (bookId) {
@@ -64,7 +78,7 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
 
   const loadSessions = async () => {
     try {
-      const params = { assistant_id: assistant.id };
+      const params = { assistant_id: currentAssistant.id };
       if (bookId) params.book_id = bookId;
       const response = await axios.get(`${API_BASE}/conversations/sessions`, { params });
       setSessions(response.data);
@@ -108,7 +122,7 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
     try {
       const data = {
         title: '主编新对话',
-        assistant_id: assistant.id
+        assistant_id: currentAssistant.id
       };
       if (bookId) data.book_id = bookId;
       const response = await axios.post(`${API_BASE}/conversations/sessions`, data);
@@ -241,7 +255,7 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
     setInputText('');
     setIsLoading(true);
 
-    const assistantConfig = JSON.parse(assistant.config || '{}');
+    const assistantConfig = JSON.parse(currentAssistant.config || '{}');
     const modelId = assistantConfig.model || assistantConfig.modelId || 'gpt-4';
 
     const messagesForAI = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
@@ -587,7 +601,19 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
       <div className="chat-sidebar">
         <div className="sidebar-header">
           <button className="back-button" onClick={onBack}>← 返回</button>
-          <h3>📖 {assistant?.name || '主编'}</h3>
+          {allAssistants && allAssistants.length > 0 ? (
+            <select 
+              value={currentAssistant?.id} 
+              onChange={(e) => handleAssistantChange(e.target.value)}
+              className="assistant-selector"
+            >
+              {allAssistants.map(a => (
+                <option key={a.id} value={a.id}>📖 {a.name}</option>
+              ))}
+            </select>
+          ) : (
+            <h3>📖 {currentAssistant?.name || '主编'}</h3>
+          )}
         </div>
         <button className="new-chat-button" onClick={createNewSession}>
           + 新对话
@@ -614,7 +640,7 @@ function EditorChatInterface({ assistant, onBack, onWorldviewSaved, bookId }) {
 
       <div className="chat-main">
         <div className="chat-header">
-          <h2>📖 {assistant?.name || '主编'}</h2>
+          <h2>📖 {currentAssistant?.name || '主编'}</h2>
           {worldInfo && (
             <button 
               className="preview-toggle-button" 

@@ -64,10 +64,21 @@ function PlotPlanningPage() {
       ]);
       setBooks(booksRes.data);
       
+      // 只显示剧情策划和自定义助手
       const plotPlannerAssistants = assistantsRes.data.filter(a => 
-        a.type === 'plot_planner' || a.name.includes('剧情策划')
+        a.type === 'plot_planner' || a.name.includes('剧情策划') || a.type === 'custom'
       );
-      setAssistants(plotPlannerAssistants.length > 0 ? plotPlannerAssistants : assistantsRes.data);
+      
+      // 排序：自定义助手排在下面
+      const sortedAssistants = [...(plotPlannerAssistants.length > 0 ? plotPlannerAssistants : [])].sort((a, b) => {
+        const aIsCustom = a.type === 'custom' || a.name.includes('自定义');
+        const bIsCustom = b.type === 'custom' || b.name.includes('自定义');
+        if (aIsCustom && !bIsCustom) return 1;
+        if (!aIsCustom && bIsCustom) return -1;
+        return 0;
+      });
+      
+      setAssistants(sortedAssistants.length > 0 ? sortedAssistants : assistantsRes.data);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -101,9 +112,13 @@ function PlotPlanningPage() {
     return (
       <PlotChatInterface
         assistant={selectedAssistant}
+        allAssistants={assistants}
         book={selectedBook}
         onBack={handleBack}
         onDataSaved={loadData}
+        onAssistantChange={(newAssistant) => {
+          setSelectedAssistant(newAssistant);
+        }}
       />
     );
   }
@@ -187,7 +202,7 @@ function PlotPlanningPage() {
   );
 }
 
-function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
+function PlotChatInterface({ assistant, book, onBack, onDataSaved, allAssistants, onAssistantChange }) {
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -199,17 +214,31 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   const [worldInfo, setWorldInfo] = useState(null);
   const [activeTab, setActiveTab] = useState('chat');
   const [timeConflict, setTimeConflict] = useState(null);
+  const [currentAssistant, setCurrentAssistant] = useState(assistant);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
   useEffect(() => {
-    if (assistant && book) {
+    if (currentAssistant && book) {
       loadSessions();
       loadPlots();
       loadCharacters();
       loadExistingData();
     }
-  }, [assistant, book]);
+  }, [currentAssistant, book]);
+
+  const handleAssistantChange = (assistantId) => {
+    // 处理类型不匹配的问题（字符串 vs 数字）
+    const newAssistant = allAssistants.find(a => String(a.id) === String(assistantId));
+    if (newAssistant) {
+      setCurrentAssistant(newAssistant);
+      setCurrentSession(null);
+      setMessages([]);
+      if (onAssistantChange) {
+        onAssistantChange(newAssistant);
+      }
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -233,7 +262,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
   const loadSessions = async () => {
     try {
       const response = await axios.get(`${API_BASE}/conversations/sessions`, {
-        params: { assistant_id: assistant.id, book_id: book.id }
+        params: { assistant_id: currentAssistant.id, book_id: book.id }
       });
       setSessions(response.data);
     } catch (error) {
@@ -294,7 +323,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
     try {
       const response = await axios.post(`${API_BASE}/conversations/sessions`, {
         title: '剧情策划新对话',
-        assistant_id: assistant.id,
+        assistant_id: currentAssistant.id,
         book_id: book.id
       });
       const newSession = response.data;
@@ -401,7 +430,7 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
     setInputText('');
     setIsLoading(true);
 
-    const assistantConfig = JSON.parse(assistant.config || '{}');
+    const assistantConfig = JSON.parse(currentAssistant.config || '{}');
     const modelId = assistantConfig.model || assistantConfig.modelId || 'gpt-4';
 
     const messagesForAI = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
@@ -870,7 +899,19 @@ function PlotChatInterface({ assistant, book, onBack, onDataSaved }) {
       <div className="chat-sidebar">
         <div className="sidebar-header">
           <button className="back-button" onClick={onBack}>← 返回</button>
-          <h3>📚 {assistant?.name || '剧情策划'}</h3>
+          {allAssistants && allAssistants.length > 0 ? (
+            <select 
+              value={currentAssistant?.id} 
+              onChange={(e) => handleAssistantChange(e.target.value)}
+              className="assistant-selector"
+            >
+              {allAssistants.map(a => (
+                <option key={a.id} value={a.id}>📚 {a.name}</option>
+              ))}
+            </select>
+          ) : (
+            <h3>📚 {currentAssistant?.name || '剧情策划'}</h3>
+          )}
         </div>
         <div className="book-info">
           <h4>{book.title}</h4>

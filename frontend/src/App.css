@@ -409,6 +409,27 @@ body {
   border-bottom: 1px solid #333;
 }
 
+.sidebar-header .assistant-selector {
+  background: #343541;
+  border: 1px solid #555;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 6px;
+  width: 100%;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.sidebar-header .assistant-selector:hover {
+  border-color: #667eea;
+}
+
+.sidebar-header .assistant-selector:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
 .back-button {
   background: transparent;
   border: 1px solid #555;
@@ -2400,4 +2421,248 @@ body {
 .next-step-link:hover {
   transform: translateX(4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 章节构建合并侧边栏样式 */
+.combined-sidebar {
+  width: 320px;
+  background: #1e1e2e;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #313244;
+  overflow: hidden;
+}
+
+.combined-sidebar .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid #313244;
+}
+
+.combined-sidebar .section-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #cdd6f4;
+  font-weight: 600;
+}
+
+.plots-tree-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid #313244;
+}
+
+.sessions-section {
+  flex: 0.8;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.plots-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.plot-item {
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+}
+
+.plot-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.plot-header {
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #cdd6f4;
+}
+
+.expand-icon {
+  font-size: 0.7rem;
+  color: #a6adc8;
+  width: 16px;
+  text-align: center;
+}
+
+.plot-title {
+  flex: 1;
+  font-size: 0.85rem;
+}
+
+.selected-indicator {
+  color: #a6e3a1;
+  font-size: 0.6rem;
+}
+
+.acts-list {
+  padding: 0 0 0.5rem 1rem;
+}
+
+.act-item {
+  margin-bottom: 0.25rem;
+}
+
+.act-header {
+  padding: 0.4rem 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: #bac2de;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.act-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.act-title {
+  flex: 1;
+}
+
+.chapters-list {
+  padding: 0 0 0 1rem;
+}
+
+.chapter-item {
+  padding: 0.4rem 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: #a6adc8;
+  font-size: 0.78rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  margin-bottom: 0.15rem;
+}
+
+.chapter-item:hover {
+  background: rgba(139, 92, 246, 0.15);
+  color: #cdd6f4;
+}
+
+.chapter-item.selected {
+  background: rgba(139, 92, 246, 0.25);
+  color: #cdd6f4;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.chapter-number {
+  color: #89b4fa;
+  font-weight: 600;
+  min-width: 45px;
+}
+
+.empty-tree {
+  text-align: center;
+  padding: 2rem;
+  color: #6c7086;
+  font-size: 0.85rem;
+}
+
+/* 优化会话列表样式 */
+.sessions-section .sessions-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.sessions-section .session-item {
+  margin-bottom: 0.3rem;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+}
+
+.sessions-section .session-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sessions-section .session-item.active {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.sessions-section .new-chat-button {
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #cdd6f4;
+}
+
+.sessions-section .new-chat-button:hover {
+  background: rgba(139, 92, 246, 0.3);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* 优化书籍信息区域 */
+.combined-sidebar .book-info {
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid #313244;
+}
+
+.combined-sidebar .book-info h4 {
+  margin: 0 0 0.3rem 0;
+  color: #cdd6f4;
+  font-size: 1rem;
+}
+
+.combined-sidebar .book-author {
+  margin: 0 0 0.3rem 0;
+  color: #a6adc8;
+  font-size: 0.85rem;
+}
+
+.combined-sidebar .book-stats-info {
+  margin: 0;
+  color: #89b4fa;
+  font-size: 0.8rem;
+}
+
+/* 滚动条美化 */
+.plots-tree::-webkit-scrollbar,
+.sessions-section .sessions-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.plots-tree::-webkit-scrollbar-track,
+.sessions-section .sessions-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.plots-tree::-webkit-scrollbar-thumb,
+.sessions-section .sessions-list::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 3px;
+}
+
+.plots-tree::-webkit-scrollbar-thumb:hover,
+.sessions-section .sessions-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
 }
