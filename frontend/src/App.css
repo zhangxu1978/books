@@ -1033,33 +1033,41 @@ body {
 }
 
 .workspace-controls {
-  padding: 1rem 2rem;
+  padding: 0.75rem 1rem;
   background: #fafafa;
   border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
 }
 
 .chapter-title-row {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.chapter-title-row .chapter-title-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .view-controls {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
 .view-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem;
   background: white;
   border: 1px solid #ddd;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 1rem;
   transition: all 0.2s;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .view-btn:hover {
@@ -1073,14 +1081,19 @@ body {
 }
 
 .btn-add {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem;
   background: #28a745;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 1rem;
   transition: background 0.2s;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-add:hover {
@@ -1213,10 +1226,21 @@ body {
 
 .panel-controls {
   display: flex;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid #e0e0e0;
   background: #fafafa;
+}
+
+.btn-primary,
+.btn-success {
+  padding: 0.5rem;
+  font-size: 1rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-success {
@@ -1240,6 +1264,129 @@ body {
   text-align: right;
   font-size: 0.875rem;
   color: #666;
+}
+
+/* 侧边栏折叠样式 */
+.sidebar-header {
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.sidebar-toggle-btn,
+.sidebar-expand-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.sidebar-toggle-btn:hover,
+.sidebar-expand-btn:hover {
+  background: #0056b3;
+}
+
+.sidebar-expand-btn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  padding: 1rem 0.5rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.sidebar.collapsed {
+  width: 40px;
+  min-width: 40px;
+  position: relative;
+}
+
+.workspace-layout.sidebar-collapsed .sidebar {
+  transition: width 0.3s ease;
+}
+
+.workspace-layout.sidebar-collapsed .main-content {
+  margin-left: 0;
+}
+
+/* 助手选择下拉框样式 */
+.assistant-select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.assistant-select:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+/* 最大化模式样式 */
+.writer-workspace.maximized-mode {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: white;
+}
+
+.writers-container.maximized {
+  height: calc(100vh - 200px);
+}
+
+.writer-panel.maximized {
+  width: 100%;
+  height: 100%;
+}
+
+.writer-panel.maximized .editor-wrapper {
+  height: calc(100% - 160px);
+}
+
+/* 优化布局，让编辑器占据更多空间 */
+.workspace-layout {
+  height: calc(100vh - 70px);
+}
+
+.workspace-controls {
+  padding: 0.75rem 1rem;
+}
+
+.chapter-title-input {
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.panel-header {
+  padding: 0.5rem 0.75rem;
+}
+
+.panel-controls {
+  padding: 0.5rem 0.75rem;
+}
+
+.editor-wrapper {
+  padding: 0.75rem;
+}
+
+.writer-name-input {
+  width: 100px;
+}
+
+.version-name-input {
+  width: 120px;
 }
 
 /* Editor Workflow Styles */

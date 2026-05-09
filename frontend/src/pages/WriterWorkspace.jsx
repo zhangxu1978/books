@@ -17,6 +17,8 @@ function WriterWorkspace() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [activeInstance, setActiveInstance] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [maximizedInstance, setMaximizedInstance] = useState(null);
 
   const workflowSteps = [
     { 
@@ -285,6 +287,31 @@ function WriterWorkspace() {
     setWriterInstances([...writerInstances, newInstance]);
   };
 
+  const updateInstanceAssistant = (instanceId, assistantId) => {
+    const assistant = assistants.find(a => String(a.id) === String(assistantId));
+    setWriterInstances(writerInstances.map(inst =>
+      inst.id === instanceId ? { ...inst, assistant } : inst
+    ));
+  };
+
+  const toggleMaximize = (instanceId) => {
+    if (maximizedInstance === instanceId) {
+      setMaximizedInstance(null);
+    } else {
+      setMaximizedInstance(instanceId);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && maximizedInstance !== null) {
+        setMaximizedInstance(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [maximizedInstance]);
+
   useEffect(() => {
     if (writerInstances.length === 0) {
       createWriterInstance();
@@ -292,7 +319,7 @@ function WriterWorkspace() {
   }, [assistants]);
 
   return (
-    <div className="writer-workspace">
+    <div className={`writer-workspace ${maximizedInstance ? 'maximized-mode' : ''}`}>
       <div className="page-header">
         <h1>✍️ 写手多版本创作</h1>
         <Link to="/" className="back-link">← 返回首页</Link>
@@ -300,54 +327,75 @@ function WriterWorkspace() {
 
       {message && <div className="notification-message">{message}</div>}
 
-      <div className="workspace-layout">
-        <div className="sidebar">
-          <div className="sidebar-section">
-            <h3>选择书籍</h3>
-            <select
-              value={selectedBook?.id || ''}
-              onChange={(e) => {
-                const book = books.find(b => b.id === parseInt(e.target.value));
-                setSelectedBook(book);
-                handleCreateNewChapter();
-              }}
-              className="book-select"
-            >
-              <option value="">请选择书籍</option>
-              {books.map(book => (
-                <option key={book.id} value={book.id}>{book.title}</option>
-              ))}
-            </select>
-          </div>
-
-          {selectedBook && (
-            <div className="sidebar-section">
-              <div className="section-header">
-                <h3>章节列表</h3>
-                <button onClick={handleCreateNewChapter} className="btn-small">
-                  + 新建章节
+      <div className={`workspace-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+          {!sidebarCollapsed ? (
+            <>
+              <div className="sidebar-header">
+                <button 
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="sidebar-toggle-btn"
+                  title="折叠侧边栏"
+                >
+                  ◀
                 </button>
               </div>
-              <div className="chapters-list">
-                {chapters.length === 0 ? (
-                  <p className="empty-list">暂无章节</p>
-                ) : (
-                  chapters.map(chapter => (
-                    <div
-                      key={chapter.id}
-                      className={`chapter-item ${selectedChapter?.id === chapter.id ? 'active' : ''}`}
-                    >
-                      <div className="chapter-item-content" onClick={() => handleSelectChapter(chapter)}>
-                        <span className="chapter-title">{chapter.title}</span>
-                        {chapter.word_count > 0 && (
-                          <span className="word-count">{chapter.word_count} 字</span>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div className="sidebar-section">
+                <h3>选择书籍</h3>
+                <select
+                  value={selectedBook?.id || ''}
+                  onChange={(e) => {
+                    const book = books.find(b => b.id === parseInt(e.target.value));
+                    setSelectedBook(book);
+                    handleCreateNewChapter();
+                  }}
+                  className="book-select"
+                >
+                  <option value="">请选择书籍</option>
+                  {books.map(book => (
+                    <option key={book.id} value={book.id}>{book.title}</option>
+                  ))}
+                </select>
               </div>
-            </div>
+
+              {selectedBook && (
+                <div className="sidebar-section">
+                  <div className="section-header">
+                    <h3>章节列表</h3>
+                    <button onClick={handleCreateNewChapter} className="btn-small">
+                      + 新建章节
+                    </button>
+                  </div>
+                  <div className="chapters-list">
+                    {chapters.length === 0 ? (
+                      <p className="empty-list">暂无章节</p>
+                    ) : (
+                      chapters.map(chapter => (
+                        <div
+                          key={chapter.id}
+                          className={`chapter-item ${selectedChapter?.id === chapter.id ? 'active' : ''}`}
+                        >
+                          <div className="chapter-item-content" onClick={() => handleSelectChapter(chapter)}>
+                            <span className="chapter-title">{chapter.title}</span>
+                            {chapter.word_count > 0 && (
+                              <span className="word-count">{chapter.word_count} 字</span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <button 
+              onClick={() => setSidebarCollapsed(false)}
+              className="sidebar-expand-btn"
+              title="展开侧边栏"
+            >
+              ▶
+            </button>
           )}
         </div>
 
@@ -368,61 +416,69 @@ function WriterWorkspace() {
                     onChange={(e) => setChapterTitle(e.target.value)}
                     className="chapter-title-input"
                   />
-                </div>
-
-                <div className="view-controls">
                   <button
                     className={`view-btn ${viewMode === 'columns' ? 'active' : ''}`}
                     onClick={() => setViewMode('columns')}
+                    title="分栏视图"
                   >
-                    分栏视图
+                    📊
                   </button>
                   <button
                     className={`view-btn ${viewMode === 'tabs' ? 'active' : ''}`}
                     onClick={() => setViewMode('tabs')}
+                    title="标签页"
                   >
-                    标签页
+                    📑
                   </button>
-                  <button className="btn-add" onClick={createWriterInstance}>
-                    + 添加写手
+                  <button className="btn-add" onClick={createWriterInstance} title="添加写手">
+                    ➕
                   </button>
                 </div>
               </div>
 
-              {viewMode === 'tabs' && writerInstances.length > 0 && (
+              {viewMode === 'tabs' && writerInstances.length > 0 && !maximizedInstance && (
                 <div className="tabs-header">
                   {writerInstances.map((inst, index) => (
-                    <div
-                      key={inst.id}
-                      className={`tab-item ${activeInstance === index ? 'active' : ''}`}
-                      onClick={() => setActiveInstance(index)}
+                  <div
+                    key={inst.id}
+                    className={`tab-item ${activeInstance === index ? 'active' : ''}`}
+                    onClick={() => setActiveInstance(index)}
+                  >
+                    <span className="tab-name">{inst.name}</span>
+                    <button
+                      className="tab-close"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeWriterInstance(inst.id);
+                      }}
                     >
-                      <span className="tab-name">{inst.name}</span>
-                      <button
-                        className="tab-close"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeWriterInstance(inst.id);
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                      ×
+                    </button>
+                  </div>
+                ))}
                 </div>
               )}
 
-              <div className={`writers-container ${viewMode}`}>
-                {(viewMode === 'columns' ? writerInstances : [writerInstances[activeInstance]]).map((inst, index) => (
-                  <div key={inst.id} className="writer-panel">
+              <div className={`writers-container ${viewMode} ${maximizedInstance ? 'maximized' : ''}`}>
+                {(maximizedInstance ? 
+                  [writerInstances.find(inst => inst.id === maximizedInstance)] : 
+                  (viewMode === 'columns' ? writerInstances : [writerInstances[activeInstance]])
+                ).filter(Boolean).map((inst, index) => (
+                  <div key={inst.id} className={`writer-panel ${maximizedInstance === inst.id ? 'maximized' : ''}`}>
                     <div className="panel-header">
                       <div className="panel-info">
-                        <input
-                          type="text"
-                          value={inst.name}
-                          onChange={(e) => updateInstanceName(inst.id, e.target.value)}
-                          className="writer-name-input"
-                        />
+                        <select
+                          value={inst.assistant?.id || ''}
+                          onChange={(e) => updateInstanceAssistant(inst.id, e.target.value)}
+                          className="assistant-select"
+                        >
+                          <option value="">选择助手</option>
+                          {assistants.map(assistant => (
+                            <option key={assistant.id} value={assistant.id}>
+                              {assistant.name}
+                            </option>
+                          ))}
+                        </select>
                         <input
                           type="text"
                           value={inst.versionName}
@@ -432,14 +488,7 @@ function WriterWorkspace() {
                         />
                       </div>
                       <div className="panel-actions">
-                        <button
-                          onClick={() => duplicateVersion(inst.id)}
-                          className="btn-small"
-                          title="复制版本"
-                        >
-                          📋
-                        </button>
-                        {viewMode === 'columns' && (
+                        {viewMode === 'columns' && !maximizedInstance && (
                           <button
                             onClick={() => removeWriterInstance(inst.id)}
                             className="btn-small btn-danger"
@@ -456,15 +505,31 @@ function WriterWorkspace() {
                         onClick={() => generateContent(inst.id)}
                         disabled={inst.isGenerating}
                         className="btn-primary"
+                        title={inst.isGenerating ? '生成中...' : '生成内容'}
                       >
-                        {inst.isGenerating ? '生成中...' : '🤖 生成内容'}
+                        {inst.isGenerating ? '⏳' : '🤖'}
                       </button>
                       <button
                         onClick={() => saveAsChapter(inst.id)}
                         disabled={loading}
                         className="btn-success"
+                        title="保存为章节"
                       >
-                        💾 保存为章节
+                        💾
+                      </button>
+                      <button
+                        onClick={() => toggleMaximize(inst.id)}
+                        className="btn-small btn-maximize"
+                        title={maximizedInstance === inst.id ? "还原" : "最大化"}
+                      >
+                        ⛶
+                      </button>
+                      <button
+                        onClick={() => duplicateVersion(inst.id)}
+                        className="btn-small"
+                        title="复制版本"
+                      >
+                        📋
                       </button>
                     </div>
 
