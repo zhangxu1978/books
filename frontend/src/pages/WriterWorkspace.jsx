@@ -25,7 +25,7 @@ function WriterWorkspace() {
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [chapterTitle, setChapterTitle] = useState('');
-  const [targetWordCount, setTargetWordCount] = useState(2000);
+  const [targetWordCount, setTargetWordCount] = useState(0);
   const [writerInstances, setWriterInstances] = useState([]);
   const [viewMode, setViewMode] = useState('columns');
   const [loading, setLoading] = useState(false);
@@ -88,6 +88,12 @@ function WriterWorkspace() {
       fetchPlots(selectedBook.id);
       fetchChapterOutlines(selectedBook.id);
       fetchWorldview(selectedBook.id);
+      // 设置目标字数为书籍的 words_per_chapter 字段
+      if (selectedBook.words_per_chapter) {
+        setTargetWordCount(selectedBook.words_per_chapter);
+      } else {
+        setTargetWordCount(2000); // 如果书籍没有设置，则使用默认值
+      }
     }
   }, [selectedBook]);
 
