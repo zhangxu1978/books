@@ -323,11 +323,11 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
         plot_id: selectedPlot?.id || 1,
         chapter_title: outlineData.title || selectedChapter?.title || '未命名章节',
         chapter_order: selectedChapter?.order_in_plot || 0,
-        atmosphere: outlineData.atmosphere,
-        purpose: outlineData.purpose,
-        summary: outlineData.summary,
-        plot_details: outlineData.plot_details,
-        characters: Array.isArray(outlineData.characters) ? JSON.stringify(outlineData.characters) : outlineData.characters
+        atmosphere: outlineData.atmosphere || selectedChapter?.content || '',
+        purpose: outlineData.purpose || selectedChapter?.purpose || '',
+        summary: outlineData.summary || '',
+        plot_details: outlineData.plot_details || '',
+        characters: Array.isArray(outlineData.characters) ? JSON.stringify(outlineData.characters) : (outlineData.characters || '')
       });
       if (response.data) {
         loadChapterOutlines();
