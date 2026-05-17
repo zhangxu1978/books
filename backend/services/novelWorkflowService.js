@@ -196,6 +196,11 @@ function parseEditorResponse(response) {
     if (jsonData.ready === true && jsonData.character) {
       result.characterReady = true;
     }
+    if (jsonData.chapterOutline && typeof jsonData.chapterOutline === 'object') {
+      result.chapterOutline = jsonData.chapterOutline;
+      console.log('=== chapterOutline detected ===');
+      console.log('chapterOutline data:', JSON.stringify(jsonData.chapterOutline, null, 2));
+    }
   }
 
   console.log('Final parse result:', result);

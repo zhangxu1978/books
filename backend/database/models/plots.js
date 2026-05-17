@@ -40,27 +40,28 @@ const Plots = {
   },
 
   update: function(id, data) {
+    const numericId = parseInt(id, 10);
     const stmt = db.prepare(`
       UPDATE plots
       SET outline_id = ?, title = ?, content = ?, target = ?, obstacle = ?, reward = ?, suspense = ?, estimated_chapters = ?, start_time = ?, end_time = ?, time_confirmed = ?, order_num = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
     stmt.run(
-      data.outline_id || null, 
-      data.title, 
-      data.content || null,
-      data.target || null,
-      data.obstacle || null,
-      data.reward || null,
-      data.suspense || null,
-      data.estimated_chapters || 0,
-      data.start_time || null,
-      data.end_time || null,
-      data.time_confirmed || false,
-      data.order_num || 0,
-      id
+      data.outline_id !== undefined ? data.outline_id : null, 
+      data.title !== undefined ? data.title : '', 
+      data.content !== undefined ? data.content : null,
+      data.target !== undefined ? data.target : null,
+      data.obstacle !== undefined ? data.obstacle : null,
+      data.reward !== undefined ? data.reward : null,
+      data.suspense !== undefined ? data.suspense : null,
+      data.estimated_chapters !== undefined ? data.estimated_chapters : 0,
+      data.start_time !== undefined ? data.start_time : null,
+      data.end_time !== undefined ? data.end_time : null,
+      data.time_confirmed !== undefined ? (data.time_confirmed ? 1 : 0) : 0,
+      data.order_num !== undefined ? data.order_num : 0,
+      numericId
     );
-    return this.getById(id);
+    return this.getById(numericId);
   },
 
   delete: function(id) {

@@ -549,11 +549,15 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
     
     try {
       const plotId = editingChapter.plot_id;
-      const plot = plots.find(p => p.id === plotId);
+      const plot = plots.find(p => String(p.id) === String(plotId));
       if (!plot || !plot.content || !plot.content.acts) return;
       
       const actIndex = editingChapter.act_index;
       const chapterIndex = editingChapter.chapter_index;
+      
+      if (!plot.content.acts[actIndex] || !plot.content.acts[actIndex].chapters || !plot.content.acts[actIndex].chapters[chapterIndex]) {
+        return;
+      }
       
       plot.content.acts[actIndex].chapters[chapterIndex] = {
         title: editFormData.title,
