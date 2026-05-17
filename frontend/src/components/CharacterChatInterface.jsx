@@ -20,7 +20,7 @@ function CharacterChatInterface({ assistant, allAssistants, onBack, onCharacterS
     if (currentAssistant) {
       loadSessions();
     }
-  }, [currentAssistant]);
+  }, [currentAssistant, bookId]);
 
   const handleAssistantChange = (assistantId) => {
     // 处理类型不匹配的问题（字符串 vs 数字）
@@ -513,7 +513,7 @@ function CharacterChatInterface({ assistant, allAssistants, onBack, onCharacterS
           />
           <button
             className="send-button"
-            onClick={isLoading ? stopGeneration : sendMessage}
+            onClick={isLoading ? stopGeneration : () => sendMessage()}
           >
             {isLoading ? '停止' : '发送'}
           </button>

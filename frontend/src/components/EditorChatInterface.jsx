@@ -26,7 +26,7 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
     if (currentAssistant) {
       loadSessions();
     }
-  }, [currentAssistant]);
+  }, [currentAssistant, bookId]);
 
   const handleAssistantChange = (assistantId) => {
     // 处理类型不匹配的问题（字符串 vs 数字）
@@ -714,7 +714,7 @@ function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSave
           />
           <button
             className="send-button"
-            onClick={isLoading ? stopGeneration : sendMessage}
+            onClick={isLoading ? stopGeneration : () => sendMessage()}
             disabled={planningCompleted}
           >
             {isLoading ? '停止' : planningCompleted ? '规划完成' : '发送'}

@@ -356,7 +356,7 @@ function MultiChatInterface({ assistants, onBack }) {
           />
           <button
             className="send-button"
-            onClick={sendMessage}
+            onClick={() => sendMessage()}
             disabled={Object.values(loadingStates).some(v => v)}
           >
             {Object.values(loadingStates).some(v => v) ? '回复中...' : '发送给所有分身'}

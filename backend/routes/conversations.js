@@ -8,7 +8,9 @@ router.get('/sessions', (req, res) => {
   try {
     const { assistant_id, book_id } = req.query;
     let sessions;
-    if (assistant_id) {
+    if (assistant_id && book_id) {
+      sessions = ChatSessions.getByAssistantIdAndBookId(assistant_id, book_id);
+    } else if (assistant_id) {
       sessions = ChatSessions.getByAssistantId(assistant_id);
     } else if (book_id) {
       sessions = ChatSessions.getByBookId(book_id);

@@ -305,7 +305,7 @@ function ChatInterface({ assistant, onBack }) {
           />
           <button
             className="send-button"
-            onClick={isLoading ? stopGeneration : sendMessage}
+            onClick={isLoading ? stopGeneration : () => sendMessage()}
           >
             {isLoading ? '停止' : '发送'}
           </button>

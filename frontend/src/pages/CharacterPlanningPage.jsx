@@ -72,7 +72,6 @@ function CharacterPlanningPage() {
   const handleStartNew = () => {
     if (assistants.length > 0) {
       setSelectedAssistant(assistants[0]);
-      setSelectedBook(null);
       setShowChat(true);
     }
   };

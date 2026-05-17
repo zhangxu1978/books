@@ -25,6 +25,11 @@ const ChatSessions = {
     return stmt.all(bookId);
   },
 
+  getByAssistantIdAndBookId: function(assistantId, bookId) {
+    const stmt = db.prepare('SELECT * FROM chat_sessions WHERE assistant_id = ? AND book_id = ? ORDER BY updated_at DESC');
+    return stmt.all(assistantId, bookId);
+  },
+
   getById: function(id) {
     const stmt = db.prepare('SELECT * FROM chat_sessions WHERE id = ?');
     return stmt.get(id);
