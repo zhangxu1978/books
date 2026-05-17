@@ -19,6 +19,12 @@ function WriterWorkspace() {
   const [activeInstance, setActiveInstance] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [maximizedInstance, setMaximizedInstance] = useState(null);
+  const [plots, setPlots] = useState([]);
+  const [chapterOutlines, setChapterOutlines] = useState([]);
+  const [worldview, setWorldview] = useState(null);
+  const [selectedPlot, setSelectedPlot] = useState(null);
+  const [selectedOutline, setSelectedOutline] = useState(null);
+  const [showActionMenu, setShowActionMenu] = useState(false);
 
   const workflowSteps = [
     { 
@@ -65,6 +71,9 @@ function WriterWorkspace() {
   useEffect(() => {
     if (selectedBook) {
       fetchChapters(selectedBook.id);
+      fetchPlots(selectedBook.id);
+      fetchChapterOutlines(selectedBook.id);
+      fetchWorldview(selectedBook.id);
     }
   }, [selectedBook]);
 
@@ -90,6 +99,39 @@ function WriterWorkspace() {
       setChapters(response.data);
     } catch (error) {
       console.error('Error fetching chapters:', error);
+    }
+  };
+
+  const fetchPlots = async (bookId) => {
+    try {
+      const response = await axios.get(`${API_BASE}/plots/book/${bookId}`);
+      const parsedPlots = response.data.map(plot => ({
+        ...plot,
+        content: plot.content ? JSON.parse(plot.content) : { acts: [] }
+      }));
+      setPlots(parsedPlots);
+    } catch (error) {
+      console.error('Error fetching plots:', error);
+    }
+  };
+
+  const fetchChapterOutlines = async (bookId) => {
+    try {
+      const response = await axios.get(`${API_BASE}/chapter-outlines/book/${bookId}`);
+      setChapterOutlines(response.data);
+    } catch (error) {
+      console.error('Error fetching chapter outlines:', error);
+    }
+  };
+
+  const fetchWorldview = async (bookId) => {
+    try {
+      const response = await axios.get(`${API_BASE}/worlds/book/${bookId}`);
+      if (response.data.length > 0) {
+        setWorldview(response.data[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching worldview:', error);
     }
   };
 
@@ -150,6 +192,12 @@ function WriterWorkspace() {
       return;
     }
 
+    if (!instance.assistant) {
+      setMessage('请先选择一个助手');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
     if (!chapterTitle.trim()) {
       setMessage('请输入章节标题');
       setTimeout(() => setMessage(''), 3000);
@@ -162,12 +210,18 @@ function WriterWorkspace() {
 
     try {
       const prompt = buildGenerationPrompt(instance);
-      const response = await axios.post(`${API_BASE}/ai/chat`, {
-        modelId: instance.assistant?.config?.modelId || 'deepseek-chat',
+      const assistantConfig = typeof instance.assistant.config === 'string' 
+        ? JSON.parse(instance.assistant.config || '{}') 
+        : (instance.assistant.config || {});
+      const modelId = assistantConfig.model || assistantConfig.modelId || 'deepseek-chat';
+      const systemPrompt = assistantConfig.systemPrompt || '你是一位专业的小说写手，请根据要求创作章节内容。';
+      
+      const response = await axios.post(`${API_BASE}/chat`, {
+        modelId,
         messages: [
           {
             role: 'system',
-            content: instance.assistant?.config?.systemPrompt || '你是一位专业的小说写手，请根据要求创作章节内容。'
+            content: systemPrompt
           },
           {
             role: 'user',
@@ -194,11 +248,41 @@ function WriterWorkspace() {
     let prompt = `请为小说《${selectedBook.title}》创作章节内容。\n\n`;
     prompt += `章节标题：${chapterTitle}\n\n`;
     
-    if (selectedChapter) {
-      prompt += `参考章节内容：${selectedChapter.l1 || selectedChapter.l2 || selectedChapter.l3}\n\n`;
+    // 添加世界观参考
+    if (worldview?.content) {
+      prompt += `【世界观设定】\n${worldview.content}\n\n`;
     }
     
-    prompt += '请创作完整的章节内容，语言流畅，情节丰富。';
+    // 添加当前剧情参考
+    if (selectedPlot) {
+      prompt += `【当前剧情】\n标题: ${selectedPlot.title}\n`;
+      if (selectedPlot.content?.summary) {
+        prompt += `概要: ${selectedPlot.content.summary}\n`;
+      }
+      prompt += '\n';
+    }
+    
+    // 添加当前细纲参考
+    if (selectedOutline) {
+      prompt += `【当前细纲】\n标题: ${selectedOutline.chapter_title}\n`;
+      if (selectedOutline.atmosphere) {
+        prompt += `氛围: ${selectedOutline.atmosphere}\n`;
+      }
+      if (selectedOutline.purpose) {
+        prompt += `本章作用: ${selectedOutline.purpose}\n`;
+      }
+      if (selectedOutline.plot_details) {
+        prompt += `情节细节: ${selectedOutline.plot_details}\n`;
+      }
+      prompt += '\n';
+    }
+    
+    // 添加以前章节内容参考
+    if (selectedChapter) {
+      prompt += `【参考章节】\n${selectedChapter.l1 || selectedChapter.l2 || selectedChapter.l3 || '暂无内容'}\n\n`;
+    }
+    
+    prompt += '请创作完整的章节内容，语言流畅，情节丰富，符合上述参考信息。';
     return prompt;
   };
 
@@ -322,6 +406,55 @@ function WriterWorkspace() {
     <div className={`writer-workspace ${maximizedInstance ? 'maximized-mode' : ''}`}>
       <div className="page-header">
         <h1>✍️ 写手多版本创作</h1>
+        <div className="header-selectors">
+          <select
+            value={selectedBook?.id || ''}
+            onChange={(e) => {
+              const book = books.find(b => b.id === parseInt(e.target.value));
+              setSelectedBook(book);
+              setSelectedPlot(null);
+              setSelectedOutline(null);
+              handleCreateNewChapter();
+            }}
+            className="book-select"
+          >
+            <option value="">请选择书籍</option>
+            {books.map(book => (
+              <option key={book.id} value={book.id}>{book.title}</option>
+            ))}
+          </select>
+          <select
+            value={selectedPlot?.id || ''}
+            onChange={(e) => {
+              const plot = plots.find(p => p.id === parseInt(e.target.value));
+              setSelectedPlot(plot);
+            }}
+            className="plot-select"
+            disabled={!selectedBook}
+          >
+            <option value="">选择剧情</option>
+            {plots.map(plot => (
+              <option key={plot.id} value={plot.id}>{plot.title}</option>
+            ))}
+          </select>
+          <select
+            value={selectedOutline?.id || ''}
+            onChange={(e) => {
+              const outline = chapterOutlines.find(o => o.id === parseInt(e.target.value));
+              setSelectedOutline(outline);
+              if (outline && outline.chapter_title) {
+                setChapterTitle(outline.chapter_title);
+              }
+            }}
+            className="outline-select"
+            disabled={!selectedBook}
+          >
+            <option value="">选择细纲</option>
+            {chapterOutlines.map(outline => (
+              <option key={outline.id} value={outline.id}>{outline.chapter_title}</option>
+            ))}
+          </select>
+        </div>
         <Link to="/" className="back-link">← 返回首页</Link>
       </div>
 
@@ -340,25 +473,7 @@ function WriterWorkspace() {
                   ◀
                 </button>
               </div>
-              <div className="sidebar-section">
-                <h3>选择书籍</h3>
-                <select
-                  value={selectedBook?.id || ''}
-                  onChange={(e) => {
-                    const book = books.find(b => b.id === parseInt(e.target.value));
-                    setSelectedBook(book);
-                    handleCreateNewChapter();
-                  }}
-                  className="book-select"
-                >
-                  <option value="">请选择书籍</option>
-                  {books.map(book => (
-                    <option key={book.id} value={book.id}>{book.title}</option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedBook && (
+              {selectedBook ? (
                 <div className="sidebar-section">
                   <div className="section-header">
                     <h3>章节列表</h3>
@@ -386,6 +501,10 @@ function WriterWorkspace() {
                     )}
                   </div>
                 </div>
+              ) : (
+                <div className="sidebar-section">
+                  <p className="empty-list">请先选择书籍</p>
+                </div>
               )}
             </>
           ) : (
@@ -408,31 +527,122 @@ function WriterWorkspace() {
           ) : (
             <>
               <div className="workspace-controls">
-                <div className="chapter-title-row">
-                  <input
-                    type="text"
-                    placeholder="输入章节标题..."
-                    value={chapterTitle}
-                    onChange={(e) => setChapterTitle(e.target.value)}
-                    className="chapter-title-input"
-                  />
+                <input
+                  type="text"
+                  placeholder="输入章节标题..."
+                  value={chapterTitle}
+                  onChange={(e) => setChapterTitle(e.target.value)}
+                  className="chapter-title-input"
+                />
+                <select
+                  value={writerInstances[activeInstance]?.assistant?.id || ''}
+                  onChange={(e) => {
+                    if (writerInstances[activeInstance]) {
+                      updateInstanceAssistant(writerInstances[activeInstance].id, e.target.value);
+                    }
+                  }}
+                  className="assistant-select"
+                  disabled={!selectedBook}
+                >
+                  <option value="">选择助手</option>
+                  {assistants.map(assistant => (
+                    <option key={assistant.id} value={assistant.id}>
+                      {assistant.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={writerInstances[activeInstance]?.versionName || ''}
+                  onChange={(e) => {
+                    if (writerInstances[activeInstance]) {
+                      updateVersionName(writerInstances[activeInstance].id, e.target.value);
+                    }
+                  }}
+                  className="version-name-input"
+                  placeholder="版本名称"
+                />
+                <div className="action-menu-wrapper">
                   <button
-                    className={`view-btn ${viewMode === 'columns' ? 'active' : ''}`}
-                    onClick={() => setViewMode('columns')}
-                    title="分栏视图"
+                    className="action-menu-button"
+                    onClick={() => setShowActionMenu(!showActionMenu)}
                   >
-                    📊
+                    ⚙️ 操作
                   </button>
-                  <button
-                    className={`view-btn ${viewMode === 'tabs' ? 'active' : ''}`}
-                    onClick={() => setViewMode('tabs')}
-                    title="标签页"
-                  >
-                    📑
-                  </button>
-                  <button className="btn-add" onClick={createWriterInstance} title="添加写手">
-                    ➕
-                  </button>
+                  {showActionMenu && (
+                    <div className="action-menu">
+                      <button
+                        className={`action-menu-item ${viewMode === 'columns' ? 'active' : ''}`}
+                        onClick={() => {
+                          setViewMode('columns');
+                          setShowActionMenu(false);
+                        }}
+                      >
+                        📊 分栏视图
+                      </button>
+                      <button
+                        className={`action-menu-item ${viewMode === 'tabs' ? 'active' : ''}`}
+                        onClick={() => {
+                          setViewMode('tabs');
+                          setShowActionMenu(false);
+                        }}
+                      >
+                        📑 标签页视图
+                      </button>
+                      <div className="action-menu-divider"></div>
+                      <button
+                        className="action-menu-item"
+                        onClick={() => {
+                          createWriterInstance();
+                          setShowActionMenu(false);
+                        }}
+                      >
+                        ➕ 添加写手
+                      </button>
+                      {writerInstances[activeInstance] && (
+                        <>
+                          <button
+                            className="action-menu-item"
+                            onClick={() => {
+                              generateContent(writerInstances[activeInstance].id);
+                              setShowActionMenu(false);
+                            }}
+                            disabled={writerInstances[activeInstance]?.isGenerating}
+                          >
+                            {writerInstances[activeInstance]?.isGenerating ? '⏳ 生成中...' : '🤖 生成内容'}
+                          </button>
+                          <button
+                            className="action-menu-item"
+                            onClick={() => {
+                              saveAsChapter(writerInstances[activeInstance].id);
+                              setShowActionMenu(false);
+                            }}
+                            disabled={loading}
+                          >
+                            💾 保存为章节
+                          </button>
+                          <button
+                            className="action-menu-item"
+                            onClick={() => {
+                              toggleMaximize(writerInstances[activeInstance].id);
+                              setShowActionMenu(false);
+                            }}
+                          >
+                            {maximizedInstance === writerInstances[activeInstance].id ? '⬜ 还原' : '⛶ 最大化'}
+                          </button>
+                          <button
+                            className="action-menu-item"
+                            onClick={() => {
+                              duplicateVersion(writerInstances[activeInstance].id);
+                              setShowActionMenu(false);
+                            }}
+                          >
+                            📋 复制版本
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -465,72 +675,17 @@ function WriterWorkspace() {
                   (viewMode === 'columns' ? writerInstances : [writerInstances[activeInstance]])
                 ).filter(Boolean).map((inst, index) => (
                   <div key={inst.id} className={`writer-panel ${maximizedInstance === inst.id ? 'maximized' : ''}`}>
-                    <div className="panel-header">
-                      <div className="panel-info">
-                        <select
-                          value={inst.assistant?.id || ''}
-                          onChange={(e) => updateInstanceAssistant(inst.id, e.target.value)}
-                          className="assistant-select"
+                    <div className="panel-header-mini">
+                      <span className="panel-name">{inst.name}</span>
+                      {viewMode === 'columns' && !maximizedInstance && (
+                        <button
+                          onClick={() => removeWriterInstance(inst.id)}
+                          className="btn-small btn-danger"
+                          title="删除"
                         >
-                          <option value="">选择助手</option>
-                          {assistants.map(assistant => (
-                            <option key={assistant.id} value={assistant.id}>
-                              {assistant.name}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          value={inst.versionName}
-                          onChange={(e) => updateVersionName(inst.id, e.target.value)}
-                          className="version-name-input"
-                          placeholder="版本名称"
-                        />
-                      </div>
-                      <div className="panel-actions">
-                        {viewMode === 'columns' && !maximizedInstance && (
-                          <button
-                            onClick={() => removeWriterInstance(inst.id)}
-                            className="btn-small btn-danger"
-                            title="删除"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="panel-controls">
-                      <button
-                        onClick={() => generateContent(inst.id)}
-                        disabled={inst.isGenerating}
-                        className="btn-primary"
-                        title={inst.isGenerating ? '生成中...' : '生成内容'}
-                      >
-                        {inst.isGenerating ? '⏳' : '🤖'}
-                      </button>
-                      <button
-                        onClick={() => saveAsChapter(inst.id)}
-                        disabled={loading}
-                        className="btn-success"
-                        title="保存为章节"
-                      >
-                        💾
-                      </button>
-                      <button
-                        onClick={() => toggleMaximize(inst.id)}
-                        className="btn-small btn-maximize"
-                        title={maximizedInstance === inst.id ? "还原" : "最大化"}
-                      >
-                        ⛶
-                      </button>
-                      <button
-                        onClick={() => duplicateVersion(inst.id)}
-                        className="btn-small"
-                        title="复制版本"
-                      >
-                        📋
-                      </button>
+                          🗑️
+                        </button>
+                      )}
                     </div>
 
                     <div className="editor-wrapper">

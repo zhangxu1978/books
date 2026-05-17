@@ -3126,6 +3126,147 @@ body {
 }
 
 /* 统计卡片 */
+
+/* 头部选择器样式 */
+.header-selectors {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.plot-select,
+.outline-select {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.plot-select:focus,
+.outline-select:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.plot-select:disabled,
+.outline-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 工作区控件新布局 */
+.workspace-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.workspace-controls .chapter-title-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.workspace-controls .assistant-select {
+  min-width: 150px;
+}
+
+.workspace-controls .version-name-input {
+  min-width: 120px;
+}
+
+/* 操作菜单样式 */
+.action-menu-wrapper {
+  position: relative;
+}
+
+.action-menu-button {
+  padding: 0.5rem 1rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-menu-button:hover {
+  background: #5a6fd6;
+}
+
+.action-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  overflow: hidden;
+  z-index: 100;
+  border: 1px solid #e0e0e0;
+}
+
+.action-menu-item {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.875rem;
+  color: #333;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-menu-item:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+.action-menu-item.active {
+  background: #e3f2fd;
+  color: #007bff;
+}
+
+.action-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-menu-divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 0.5rem 0;
+}
+
+/* 简化的面板头部 */
+.panel-header-mini {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.panel-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+}
 .character-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
