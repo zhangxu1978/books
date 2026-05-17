@@ -148,6 +148,8 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [selectedPlot, setSelectedPlot] = useState(null);
   const [currentAssistant, setCurrentAssistant] = useState(assistant);
+  const [editingChapter, setEditingChapter] = useState(null);
+  const [editFormData, setEditFormData] = useState({ title: '', content: '', purpose: '' });
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -542,6 +544,50 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
     setSelectedPlot(plots.find(p => p.id === plotId));
   };
 
+  const handleSaveChapterEdit = async () => {
+    if (!editingChapter) return;
+    
+    try {
+      const plotId = editingChapter.plot_id;
+      const plot = plots.find(p => p.id === plotId);
+      if (!plot || !plot.content || !plot.content.acts) return;
+      
+      const actIndex = editingChapter.act_index;
+      const chapterIndex = editingChapter.chapter_index;
+      
+      plot.content.acts[actIndex].chapters[chapterIndex] = {
+        title: editFormData.title,
+        content: editFormData.content,
+        purpose: editFormData.purpose
+      };
+      
+      await axios.put(`${API_BASE}/plots/${plotId}`, {
+        title: plot.title,
+        content: JSON.stringify(plot.content)
+      });
+      
+      setEditingChapter(null);
+      setEditFormData({ title: '', content: '', purpose: '' });
+      loadPlots();
+      
+      if (selectedChapter?.chapter_index === chapterIndex && selectedChapter?.plot_id === plotId) {
+        setSelectedChapter({
+          ...selectedChapter,
+          title: editFormData.title,
+          content: editFormData.content,
+          purpose: editFormData.purpose
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save chapter edit:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingChapter(null);
+    setEditFormData({ title: '', content: '', purpose: '' });
+  };
+
   const renderMessage = (msg, index) => {
     const displayText = msg.parsed && msg.parsed.narrative ? msg.parsed.narrative : msg.content;
     
@@ -639,6 +685,19 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
                                   >
                                     <span className="chapter-number">第{chapterIndex + 1}章</span>
                                     <span className="chapter-title">{chapter.title || '未命名章节'}</span>
+                                    <button 
+                                      className="chapter-edit-button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingChapter({ ...chapter, plot_id: plot.id, act_index: actIndex, chapter_index: chapterIndex });
+                                        setEditFormData({ 
+                                          title: chapter.title || '', 
+                                          content: chapter.content || '', 
+                                          purpose: chapter.purpose || '' 
+                                        });
+                                      }}
+                                      title="编辑章节"
+                                    >✏️</button>
                                   </div>
                                 ))}
                               </div>
@@ -690,16 +749,23 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
           </div>
         </div>
 
-        {selectedChapter && (
-          <div className="selected-chapter-info">
-            <div className="chapter-badge">
-              <span>📖 当前推演章节:</span>
-              <span className="chapter-name">{selectedChapter.title || '未命名章节'}</span>
+        <div className="selected-chapter-info">
+          {selectedChapter ? (
+            <>
+              <div className="chapter-badge">
+                <span>📖 当前推演章节:</span>
+                <span className="chapter-name">{selectedChapter.title || '未命名章节'}</span>
+              </div>
+              {selectedChapter.content && <p className="chapter-summary">{selectedChapter.content}</p>}
+              {selectedChapter.purpose && <p className="chapter-purpose">本章作用: {selectedChapter.purpose}</p>}
+            </>
+          ) : (
+            <div className="no-chapter-selected">
+              <span className="warning-icon">⚠️</span>
+              <span>请先在左侧选择第几幕第几章才能进行推演</span>
             </div>
-            {selectedChapter.content && <p className="chapter-summary">{selectedChapter.content}</p>}
-            {selectedChapter.purpose && <p className="chapter-purpose">本章作用: {selectedChapter.purpose}</p>}
-          </div>
-        )}
+          )}
+        </div>
 
         {activeTab === 'chat' && (
           <>
@@ -731,16 +797,22 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
                 className="chat-input"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="输入消息..."
+                placeholder={selectedChapter ? "输入消息..." : "请先选择章节后输入消息..."}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    sendMessage();
+                    if (selectedChapter && !isLoading) {
+                      sendMessage();
+                    }
                   }
                 }}
-                disabled={isLoading}
+                disabled={isLoading || !selectedChapter}
               />
-              <button className="send-button" onClick={isLoading ? stopGeneration : () => sendMessage()}>
+              <button 
+                className="send-button" 
+                onClick={isLoading ? stopGeneration : () => sendMessage()}
+                disabled={!selectedChapter || !inputText.trim()}
+              >
                 {isLoading ? '停止' : '发送'}
               </button>
             </div>
@@ -749,6 +821,50 @@ function ChapterOutlineChatInterface({ assistant, book, onBack, onDataSaved, all
 
         {activeTab === 'outlines' && (
           <ChapterOutlinesManager outlines={chapterOutlines} bookId={book.id} />
+        )}
+
+        {editingChapter && (
+          <div className="modal-overlay" onClick={handleCancelEdit}>
+            <div className="modal-content chapter-edit-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>编辑章节</h3>
+                <button className="modal-close-button" onClick={handleCancelEdit}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>章节标题</label>
+                  <input
+                    type="text"
+                    value={editFormData.title}
+                    onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                    placeholder="请输入章节标题"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>章节内容概要</label>
+                  <textarea
+                    value={editFormData.content}
+                    onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
+                    placeholder="请输入章节内容概要"
+                    rows="4"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>本章作用</label>
+                  <textarea
+                    value={editFormData.purpose}
+                    onChange={(e) => setEditFormData({ ...editFormData, purpose: e.target.value })}
+                    placeholder="请输入本章作用"
+                    rows="3"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="cancel-button" onClick={handleCancelEdit}>取消</button>
+                <button className="save-button" onClick={handleSaveChapterEdit}>保存</button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

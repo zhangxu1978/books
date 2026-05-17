@@ -2669,6 +2669,153 @@ body {
   border: 1px solid transparent;
 }
 
+/* 章节编辑按钮样式 */
+.chapter-edit-button {
+  margin-left: auto;
+  padding: 0.2rem 0.4rem;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s;
+  font-size: 0.7rem;
+}
+
+.chapter-item:hover .chapter-edit-button {
+  opacity: 1;
+}
+
+.chapter-edit-button:hover {
+  background: rgba(139, 92, 246, 0.3);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* 章节编辑弹框样式 */
+.chapter-edit-modal {
+  width: 500px;
+  max-width: 90vw;
+  background: #1e1e2e;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.chapter-edit-modal .modal-header {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chapter-edit-modal .modal-header h3 {
+  margin: 0;
+  color: #cdd6f4;
+  font-size: 1.1rem;
+}
+
+.chapter-edit-modal .modal-body {
+  padding: 1.5rem;
+}
+
+.chapter-edit-modal .form-group {
+  margin-bottom: 1rem;
+}
+
+.chapter-edit-modal .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #cdd6f4;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.chapter-edit-modal .form-group input,
+.chapter-edit-modal .form-group textarea {
+  width: 100%;
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 6px;
+  color: #cdd6f4;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.chapter-edit-modal .form-group input:focus,
+.chapter-edit-modal .form-group textarea:focus {
+  outline: none;
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.chapter-edit-modal .modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+}
+
+.chapter-edit-modal .modal-footer button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chapter-edit-modal .modal-footer .cancel-button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cdd6f4;
+}
+
+.chapter-edit-modal .modal-footer .cancel-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.chapter-edit-modal .modal-footer .save-button {
+  background: rgba(139, 92, 246, 0.8);
+  border: 1px solid rgba(139, 92, 246, 0.9);
+  color: white;
+}
+
+.chapter-edit-modal .modal-footer .save-button:hover {
+  background: rgba(139, 92, 246, 1);
+}
+
+/* 未选择章节提示样式 */
+.no-chapter-selected {
+  padding: 0.8rem 1rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffc107;
+  font-size: 0.9rem;
+}
+
+.no-chapter-selected .warning-icon {
+  font-size: 1.1rem;
+}
+
+/* 禁用状态的输入框和按钮样式 */
+.chat-input:disabled,
+.send-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.send-button:disabled {
+  background: rgba(139, 92, 246, 0.3);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
 .sessions-section .session-item:hover {
   background: rgba(255, 255, 255, 0.05);
 }
