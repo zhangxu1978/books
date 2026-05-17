@@ -769,6 +769,8 @@ function WriterWorkspace() {
                       <ChapterEditor
                         value={inst.content}
                         onChange={(content) => updateInstanceContent(inst.id, content)}
+                        assistants={assistants}
+                        defaultAssistant={inst.assistant}
                       />
                     </div>
 
