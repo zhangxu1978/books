@@ -1212,6 +1212,15 @@ body {
   min-width: 0;
 }
 
+.target-word-count-input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  width: 120px;
+  background: white;
+}
+
 .panel-actions {
   display: flex;
   gap: 0.5rem;

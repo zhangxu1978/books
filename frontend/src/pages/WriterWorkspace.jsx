@@ -5,6 +5,19 @@ import { Link } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:3022/api';
 
+// 将纯文本换行符转换为 HTML 标签
+function convertNewlinesToHTML(text) {
+  if (!text) return '';
+  // 首先将 \r\n 转换为 \n，然后处理换行
+  let html = text.replace(/\r\n/g, '\n');
+  // 将两个或更多换行符转换为段落
+  html = html.replace(/\n\n+/g, '</p><p>');
+  // 将单个换行符转换为 <br>
+  html = html.replace(/\n/g, '<br>');
+  // 包装在段落标签中
+  return `<p>${html}</p>`;
+}
+
 function WriterWorkspace() {
   const [books, setBooks] = useState([]);
   const [assistants, setAssistants] = useState([]);
@@ -12,6 +25,7 @@ function WriterWorkspace() {
   const [selectedChapter, setSelectedChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [chapterTitle, setChapterTitle] = useState('');
+  const [targetWordCount, setTargetWordCount] = useState(2000);
   const [writerInstances, setWriterInstances] = useState([]);
   const [viewMode, setViewMode] = useState('columns');
   const [loading, setLoading] = useState(false);
@@ -230,7 +244,11 @@ function WriterWorkspace() {
         ]
       });
 
-      const generatedContent = response.data.choices?.[0]?.message?.content || '';
+      let generatedContent = response.data.choices?.[0]?.message?.content || '';
+      // 如果生成的内容不是 HTML，则转换换行符为 HTML
+      if (!generatedContent.includes('<p') && !generatedContent.includes('<br')) {
+        generatedContent = convertNewlinesToHTML(generatedContent);
+      }
       setWriterInstances(writerInstances.map(inst =>
         inst.id === instanceId ? { ...inst, content: generatedContent, isGenerating: false } : inst
       ));
@@ -246,11 +264,43 @@ function WriterWorkspace() {
 
   const buildGenerationPrompt = (instance) => {
     let prompt = `请为小说《${selectedBook.title}》创作章节内容。\n\n`;
-    prompt += `章节标题：${chapterTitle}\n\n`;
+    prompt += `章节标题：${chapterTitle}\n`;
+    prompt += `目标字数：约 ${targetWordCount} 字\n\n`;
     
-    // 添加世界观参考
-    if (worldview?.content) {
-      prompt += `【世界观设定】\n${worldview.content}\n\n`;
+    // 添加完整的世界观参考
+    if (worldview) {
+      prompt += `【世界观设定】\n`;
+      if (worldview.world_name) {
+        prompt += `世界名称：${worldview.world_name}\n`;
+      }
+      if (worldview.world_type) {
+        prompt += `世界类型：${worldview.world_type}\n`;
+      }
+      if (worldview.world_desc) {
+        prompt += `世界描述：${worldview.world_desc}\n`;
+      }
+      if (worldview.atmosphere) {
+        prompt += `氛围基调：${worldview.atmosphere}\n`;
+      }
+      if (worldview.power_system) {
+        prompt += `力量体系：${worldview.power_system}\n`;
+      }
+      if (worldview.society_structure) {
+        prompt += `社会结构：${worldview.society_structure}\n`;
+      }
+      if (worldview.special_element) {
+        prompt += `特殊元素：${worldview.special_element}\n`;
+      }
+      if (worldview.player_background) {
+        prompt += `主角背景：${worldview.player_background}\n`;
+      }
+      if (worldview.world_tags) {
+        prompt += `标签：${worldview.world_tags}\n`;
+      }
+      if (worldview.content) {
+        prompt += `补充说明：${worldview.content}\n`;
+      }
+      prompt += '\n';
     }
     
     // 添加当前剧情参考
@@ -258,6 +308,12 @@ function WriterWorkspace() {
       prompt += `【当前剧情】\n标题: ${selectedPlot.title}\n`;
       if (selectedPlot.content?.summary) {
         prompt += `概要: ${selectedPlot.content.summary}\n`;
+      }
+      if (selectedPlot.target) {
+        prompt += `目标: ${selectedPlot.target}\n`;
+      }
+      if (selectedPlot.obstacle) {
+        prompt += `障碍: ${selectedPlot.obstacle}\n`;
       }
       prompt += '\n';
     }
@@ -271,8 +327,14 @@ function WriterWorkspace() {
       if (selectedOutline.purpose) {
         prompt += `本章作用: ${selectedOutline.purpose}\n`;
       }
+      if (selectedOutline.summary) {
+        prompt += `章节概要: ${selectedOutline.summary}\n`;
+      }
       if (selectedOutline.plot_details) {
         prompt += `情节细节: ${selectedOutline.plot_details}\n`;
+      }
+      if (selectedOutline.characters) {
+        prompt += `出场角色: ${selectedOutline.characters}\n`;
       }
       prompt += '\n';
     }
@@ -282,7 +344,7 @@ function WriterWorkspace() {
       prompt += `【参考章节】\n${selectedChapter.l1 || selectedChapter.l2 || selectedChapter.l3 || '暂无内容'}\n\n`;
     }
     
-    prompt += '请创作完整的章节内容，语言流畅，情节丰富，符合上述参考信息。';
+    prompt += `请创作完整的章节内容，语言流畅，情节丰富，符合上述参考信息。请确保章节约 ${targetWordCount} 字左右，段落清晰，层次分明。`;
     return prompt;
   };
 
@@ -552,16 +614,25 @@ function WriterWorkspace() {
                   ))}
                 </select>
                 <input
-                  type="text"
-                  value={writerInstances[activeInstance]?.versionName || ''}
-                  onChange={(e) => {
-                    if (writerInstances[activeInstance]) {
-                      updateVersionName(writerInstances[activeInstance].id, e.target.value);
-                    }
-                  }}
-                  className="version-name-input"
-                  placeholder="版本名称"
-                />
+                type="text"
+                value={writerInstances[activeInstance]?.versionName || ''}
+                onChange={(e) => {
+                  if (writerInstances[activeInstance]) {
+                    updateVersionName(writerInstances[activeInstance].id, e.target.value);
+                  }
+                }}
+                className="version-name-input"
+                placeholder="版本名称"
+              />
+              <input
+                type="number"
+                value={targetWordCount}
+                onChange={(e) => setTargetWordCount(parseInt(e.target.value) || 2000)}
+                className="target-word-count-input"
+                placeholder="目标字数"
+                min="100"
+                max="20000"
+              />
                 <div className="action-menu-wrapper">
                   <button
                     className="action-menu-button"
