@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const API_URL = 'http://localhost:3022/api/assistants'
-const MODELS_URL = 'http://localhost:3022/api/models'
+const API_URL = '/api/assistants'
+const MODELS_URL = '/api/models'
 
 function AssistantManager() {
   const [assistants, setAssistants] = useState([])

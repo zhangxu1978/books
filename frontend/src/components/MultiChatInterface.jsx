@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3022/api';
+const API_BASE = '/api';
 
 function MultiChatInterface({ assistants, onBack }) {
   const [sessions, setSessions] = useState([]);

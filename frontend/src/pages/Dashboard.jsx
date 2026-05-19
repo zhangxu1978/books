@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3022/api';
+const API_BASE = '/api';
 
 function Dashboard() {
   const [books, setBooks] = useState([]);

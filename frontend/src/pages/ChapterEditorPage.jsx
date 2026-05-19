@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import ChapterEditor from '../components/ChapterEditor';
 
-const API_BASE = 'http://localhost:3022/api';
+const API_BASE = '/api';
 
 function ChapterEditorPage() {
   const [books, setBooks] = useState([]);

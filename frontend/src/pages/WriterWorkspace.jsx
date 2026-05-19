@@ -3,7 +3,7 @@ import axios from 'axios';
 import ChapterEditor from '../components/ChapterEditor';
 import { Link } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:3022/api';
+const API_BASE = '/api';
 
 // 将纯文本换行符转换为 HTML 标签
 function convertNewlinesToHTML(text) {

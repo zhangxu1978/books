@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:3022/api';
+const API_BASE = '/api';
 
 function EditorChatInterface({ assistant, allAssistants, onBack, onWorldviewSaved, bookId, onAssistantChange }) {
   const [sessions, setSessions] = useState([]);

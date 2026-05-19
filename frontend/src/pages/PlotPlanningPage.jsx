@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3022/api';
+const API_BASE = '/api';
 
 function PlotPlanningPage() {
   const [books, setBooks] = useState([]);
