@@ -424,6 +424,24 @@ function WriterWorkspace() {
     })));
   };
 
+  const handleDeleteChapter = async (chapterId) => {
+    if (!confirm('确定要删除这个章节吗？')) return;
+    
+    try {
+      await axios.delete(`${API_BASE}/chapters/${chapterId}`);
+      setChapters(chapters.filter(ch => ch.id !== chapterId));
+      if (selectedChapter?.id === chapterId) {
+        handleCreateNewChapter();
+      }
+      setMessage('章节删除成功！');
+    } catch (error) {
+      console.error('Error deleting chapter:', error);
+      setMessage('删除失败，请重试');
+    } finally {
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
   const duplicateVersion = (instanceId) => {
     const sourceInstance = writerInstances.find(inst => inst.id === instanceId);
     if (!sourceInstance) return;
@@ -564,6 +582,16 @@ function WriterWorkspace() {
                               <span className="word-count">{chapter.word_count} 字</span>
                             )}
                           </div>
+                          <button 
+                            className="chapter-delete-btn" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteChapter(chapter.id);
+                            }}
+                            title="删除章节"
+                          >
+                            ✕
+                          </button>
                         </div>
                       ))
                     )}
