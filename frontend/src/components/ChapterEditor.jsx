@@ -32,6 +32,7 @@ function ChapterEditor({ value, onChange, assistants = [], defaultAssistant = nu
   const [selectedText, setSelectedText] = useState('');
   const quillRef = useRef(null);
   const ignoreNextMouseUpRef = useRef(false);
+  const savedSelectionRef = useRef(null);
 
   const getSelectedText = useCallback(() => {
     if (!quillRef.current) return '';
@@ -46,17 +47,17 @@ function ChapterEditor({ value, onChange, assistants = [], defaultAssistant = nu
   const replaceSelectedText = useCallback((newText) => {
     if (!quillRef.current) return;
     const quill = quillRef.current.getEditor();
-    const range = quill.getSelection();
-    if (range && range.length > 0) {
-      quill.deleteText(range.index, range.length);
-      quill.insertText(range.index, newText);
-      quill.setSelection(range.index, newText.length);
+    const savedRange = savedSelectionRef.current;
+    if (savedRange && savedRange.length > 0) {
+      quill.deleteText(savedRange.index, savedRange.length);
+      quill.insertText(savedRange.index, newText);
+      quill.setSelection(savedRange.index, newText.length);
+      savedSelectionRef.current = null;
     }
   }, []);
 
   const handleMouseUp = useCallback(() => {
     setTimeout(() => {
-      // 如果需要忽略这次 mouseup，重置标志位并返回
       if (ignoreNextMouseUpRef.current) {
         ignoreNextMouseUpRef.current = false;
         return;
@@ -65,6 +66,13 @@ function ChapterEditor({ value, onChange, assistants = [], defaultAssistant = nu
       const text = getSelectedText();
       if (text.trim().length > 0 && !showDialog) {
         setSelectedText(text);
+        if (quillRef.current) {
+          const quill = quillRef.current.getEditor();
+          const range = quill.getSelection();
+          if (range) {
+            savedSelectionRef.current = { ...range };
+          }
+        }
         setShowDialog(true);
       }
     }, 10);
